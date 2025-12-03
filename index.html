@@ -380,7 +380,7 @@
             N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
             N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
             N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
-            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS' // ID de votre playlist Otera
+            PLAYLIST_ID: 'YOUR_PLAYLIST_ID' // ID de votre playlist Otera
         };
 
         // Debug mode - mettre à true pour voir les détails
@@ -653,13 +653,12 @@
             }
 
             playlistTracks.innerHTML = tracks.map((track, index) => `
-                <div class="playlist-track-item">
-                    <div class="playlist-track-number">${index + 1}</div>
-                    <div class="playlist-track-cover">
+                <div class="track-item">
+                    <div class="track-cover">
                         ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
                     </div>
                     <div class="track-info">
-                        <div class="track-name">${escapeHtml(track.name)}</div>
+                        <div class="track-name">${index + 1}. ${escapeHtml(track.name)}</div>
                         <div class="track-artist">${escapeHtml(track.artist)}</div>
                     </div>
                 </div>
