@@ -454,15 +454,16 @@
             PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS'
         };
 
-        // Debug mode - ACTIVÉ pour diagnostiquer le problème
-        const DEBUG = true;
+        // Debug mode - Mettez à false pour désactiver les logs en production
+        const DEBUG = false;
 
         function debugLog(message, data) {
             if (DEBUG) {
                 console.log(`[DEBUG] ${message}`, data);
-                const debugDiv = document.getElementById('debugInfo');
-                debugDiv.style.display = 'block';
-                debugDiv.innerHTML = `${message}<br>${JSON.stringify(data).substring(0, 100)}`;
+                // Commenté pour ne pas afficher le debug visuel
+                // const debugDiv = document.getElementById('debugInfo');
+                // debugDiv.style.display = 'block';
+                // debugDiv.innerHTML = `${message}<br>${JSON.stringify(data).substring(0, 100)}`;
             }
         }
 
