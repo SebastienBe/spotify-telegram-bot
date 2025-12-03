@@ -6,7 +6,12 @@
     <title>Spotify Bot</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: var(--tg-theme-bg-color, #ffffff);
@@ -14,13 +19,308 @@
             padding: 16px;
             padding-bottom: 80px;
         }
-        /* (Tout ton CSS original réintégré ici — inchangé) */
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 20px 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .header p {
+            opacity: 0.6;
+            font-size: 14px;
+        }
+
+        .search-container {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 14px 16px;
+            padding-left: 44px;
+            border: 2px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            transition: all 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(0, 136, 204, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            opacity: 0.5;
+        }
+
+        .now-playing-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .now-playing-card:active {
+            transform: scale(0.98);
+        }
+
+        .now-playing-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .now-playing-content {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .now-playing-cover {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            flex-shrink: 0;
+        }
+
+        .now-playing-cover img {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .now-playing-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .now-playing-track {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .now-playing-artist {
+            font-size: 14px;
+            opacity: 0.9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .now-playing-empty {
+            text-align: center;
+            padding: 24px;
+            opacity: 0.8;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .track-item {
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--tg-theme-secondary-bg-color, #f4f4f4);
+            margin-bottom: 12px;
+            transition: all 0.3s;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .track-actions {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+        .track-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .track-btn-queue {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        .track-btn-playlist {
+            background: #1DB954;
+            color: white;
+        }
+
+        .track-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .track-cover {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .track-cover img {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-artist {
+            opacity: 0.6;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.6;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(0, 136, 204, 0.1);
+            border-top: 3px solid var(--tg-theme-button-color, #0088cc);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            opacity: 0.6;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s;
+            z-index: 1000;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .debug-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            max-width: 200px;
+            word-break: break-all;
+            z-index: 9999;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <!-- TON HTML COMPLET ORIGINAL -->
-
     <div class="debug-info" id="debugInfo">Debug Mode</div>
+
     <div class="header">
         <h1>🎵 Spotify Bot</h1>
         <p>Recherchez et ajoutez des musiques</p>
@@ -32,7 +332,9 @@
             <span>En cours d'écoute</span>
         </div>
         <div id="nowPlayingContent">
-            <div class="now-playing-empty">Cliquez pour voir la musique en cours</div>
+            <div class="now-playing-empty">
+                Cliquez pour voir la musique en cours
+            </div>
         </div>
     </div>
 
@@ -42,8 +344,12 @@
     </div>
 
     <div class="quick-actions">
-        <button class="quick-btn" onclick="togglePlaylist()">📋 Voir Otera</button>
-        <button class="quick-btn btn-follow" onclick="followPlaylist()">➕ Suivre Playlist</button>
+        <button class="quick-btn" onclick="togglePlaylist()">
+            📋 Voir Otera
+        </button>
+        <button class="quick-btn btn-follow" onclick="followPlaylist()">
+            ➕ Suivre Playlist
+        </button>
     </div>
 
     <div class="playlist-section" id="playlistSection">
@@ -66,261 +372,413 @@
 
     <div class="toast" id="toast"></div>
 
-<script>
-// ---------------------- CONFIG ----------------------
-const CONFIG = {
-    N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
-    N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
-    N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
-    N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
-    N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
-    PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS'
-};
+    <script>
+        // Configuration - REMPLACEZ PAR VOS WEBHOOKS N8N
+        const CONFIG = {
+            N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
+            N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
+            N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
+            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-get-playlist',
+            N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
+            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS' // ID de votre playlist Otera
+        };
 
-const DEBUG = true;
-function debugLog(msg, data) {
-    if (DEBUG) {
-        console.log('[DEBUG]', msg, data);
-        const div = document.getElementById('debugInfo');
-        div.style.display = 'block';
-        div.innerHTML = `${msg}<br>${JSON.stringify(data).substring(0,100)}`;
-    }
-}
+        // Debug mode - mettre à true pour voir les détails
+        const DEBUG = true;
 
-// ------------------ INIT TELEGRAM SAFE ------------------
-let tg;
-try {
-    tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
-    debugLog('Telegram WebApp initialisé', { user: tg.initDataUnsafe?.user });
-} catch (e) {
-    console.error('Erreur init Telegram:', e);
-    tg = {
-        initDataUnsafe: { user: { id: 'demo' } },
-        HapticFeedback: {
-            impactOccurred: () => {},
-            notificationOccurred: () => {}
+        function debugLog(message, data) {
+            if (DEBUG) {
+                console.log(`[DEBUG] ${message}`, data);
+                const debugDiv = document.getElementById('debugInfo');
+                debugDiv.style.display = 'block';
+                debugDiv.innerHTML = `${message}<br>${JSON.stringify(data).substring(0, 100)}`;
+            }
         }
-    };
-}
 
-debugLog('Haptic support', { exists: !!tg?.HapticFeedback });
-
-// ---- SECURE HAPTIC WRAPPER ----
-function safeHaptic(action, style) {
-    try {
-        if (tg?.HapticFeedback && typeof tg.HapticFeedback[action] === 'function') {
-            tg.HapticFeedback[action](style);
+        // Initialiser Telegram WebApp
+        let tg;
+        try {
+            tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            debugLog('Telegram WebApp initialisé', { user: tg.initDataUnsafe?.user });
+        } catch (error) {
+            console.error('Erreur init Telegram:', error);
+            tg = { 
+                initDataUnsafe: { user: { id: 'demo' } },
+                HapticFeedback: { 
+                    impactOccurred: () => {},
+                    notificationOccurred: () => {}
+                }
+            };
         }
-    } catch (_) {}
-}
 
-// ------------------ VARIABLES ------------------
-let searchTimeout;
-let playlistVisible = false;
-const searchInput = document.getElementById('searchInput');
-const results = document.getElementById('results');
-const trackList = document.getElementById('trackList');
-const playlistSection = document.getElementById('playlistSection');
-const playlistTracks = document.getElementById('playlistTracks');
+        // Variables globales
+        let searchTimeout;
+        let playlistVisible = false;
+        const searchInput = document.getElementById('searchInput');
+        const results = document.getElementById('results');
+        const trackList = document.getElementById('trackList');
+        const playlistSection = document.getElementById('playlistSection');
+        const playlistTracks = document.getElementById('playlistTracks');
 
-// ------------------ RECHERCHE ------------------
-searchInput.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    const query = e.target.value.trim();
+        // Recherche avec debounce
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
 
-    if (query.length < 2) {
-        results.classList.remove('active');
-        return;
-    }
+            if (query.length < 2) {
+                results.classList.remove('active');
+                return;
+            }
 
-    playlistSection.classList.remove('active');
-    playlistVisible = false;
+            // Cacher la playlist quand on recherche
+            playlistSection.classList.remove('active');
+            playlistVisible = false;
 
-    trackList.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Recherche...</div>';
-    results.classList.add('active');
+            trackList.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Recherche en cours...</div>';
+            results.classList.add('active');
 
-    searchTimeout = setTimeout(() => searchTracks(query), 500);
-});
-
-async function searchTracks(query) {
-    try {
-        const url = `${CONFIG.N8N_WEBHOOK_SEARCH}?q=${encodeURIComponent(query)}`;
-        debugLog('Recherche URL', url);
-
-        const response = await fetch(url); 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-        displayTracks(data.tracks || []);
-    } catch (e) {
-        trackList.innerHTML = `<div class='empty-state'>❌ ${e.message}</div>`;
-    }
-}
-
-function displayTracks(tracks) {
-    if (!tracks.length) {
-        trackList.innerHTML = '<div class="empty-state">Aucun résultat</div>';
-        return;
-    }
-
-    trackList.innerHTML = tracks.map(track => `
-        <div class="track-item">
-            <div class="track-cover">${track.image ? `<img src="${track.image}">` : '🎵'}</div>
-            <div class="track-info">
-                <div class="track-name">${track.name}</div>
-                <div class="track-artist">${track.artist}</div>
-            </div>
-            <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>⏭️ Queue</button>
-                <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>📋 Otera</button>
-            </div>
-        </div>`).join('');
-}
-
-// ------------------ AJOUT À LA QUEUE ------------------
-async function addToQueue(uri, name, artist, event) {
-    if (event) event.stopPropagation();
-    safeHaptic('impactOccurred', 'medium');
-
-    try {
-        const userId = tg.initDataUnsafe?.user?.id || 'demo';
-        const response = await fetch(CONFIG.N8N_WEBHOOK_ADD, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, track_uri: uri, track_name: name, track_artist: artist })
+            searchTimeout = setTimeout(() => searchTracks(query), 500);
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        safeHaptic('notificationOccurred', 'success');
-        showToast(`⏭️ "${name}" ajouté à la queue !`);
-    } catch (e) {
-        safeHaptic('notificationOccurred', 'error');
-        showToast(`❌ ${e.message}`);
-    }
-}
+        // Rechercher des musiques
+        async function searchTracks(query) {
+            try {
+                const url = `${CONFIG.N8N_WEBHOOK_SEARCH}?q=${encodeURIComponent(query)}`;
+                
+                debugLog('Recherche URL', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                debugLog('Response status', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                debugLog('Data reçue', data);
+                
+                displayTracks(data.tracks || []);
+            } catch (error) {
+                console.error('Erreur recherche:', error);
+                debugLog('Erreur', error.message);
+                trackList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Erreur: ${error.message}</p></div>`;
+                showToast(`❌ ${error.message}`);
+            }
+        }
 
-// ------------------ AJOUT PLAYLIST ------------------
-async function addToPlaylist(uri, name, artist, event) {
-    if (event) event.stopPropagation();
-    safeHaptic('impactOccurred', 'medium');
+        // Afficher les résultats
+        function displayTracks(tracks) {
+            debugLog('Affichage tracks', { count: tracks.length });
+            
+            if (!tracks || tracks.length === 0) {
+                trackList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>Aucun résultat trouvé</p></div>';
+                return;
+            }
 
-    try {
-        const userId = tg.initDataUnsafe?.user?.id || 'demo';
-        const response = await fetch(CONFIG.N8N_WEBHOOK_ADD_PLAYLIST, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, track_uri: uri, track_name: name, track_artist: artist, playlist_id: CONFIG.PLAYLIST_ID })
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        safeHaptic('notificationOccurred', 'success');
-        showToast(`📋 "${name}" ajouté à Otera !`);
-    } catch (e) {
-        safeHaptic('notificationOccurred', 'error');
-        showToast(`❌ ${e.message}`);
-    }
-}
-
-// ------------------ PLAYLIST ------------------
-async function togglePlaylist() {
-    safeHaptic('impactOccurred', 'light');
-    playlistVisible = !playlistVisible;
-
-    if (playlistVisible) {
-        results.classList.remove('active');
-        playlistSection.classList.add('active');
-        await loadPlaylist();
-    } else playlistSection.classList.remove('active');
-}
-
-async function loadPlaylist() {
-    playlistTracks.innerHTML = '<div class="loading">Chargement...</div>';
-    try {
-        const response = await fetch(`${CONFIG.N8N_WEBHOOK_GET_PLAYLIST}?playlist_id=${CONFIG.PLAYLIST_ID}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-        displayPlaylistTracks(data.tracks || [], data.total || 0);
-    } catch (e) {
-        playlistTracks.innerHTML = `<div class='empty-state'>❌ ${e.message}</div>`;
-    }
-}
-
-function displayPlaylistTracks(tracks, total) {
-    document.getElementById('playlistCount').textContent = `${total} musique${total>1?'s':''}`;
-    if (!tracks.length) {
-        playlistTracks.innerHTML = '<div class="empty-state">Playlist vide</div>';
-        return;
-    }
-
-    playlistTracks.innerHTML = tracks.map((t,i)=>`
-        <div class="track-item">
-            <div class="track-cover">${t.image?`<img src='${t.image}'>`:'🎵'}</div>
-            <div class="track-info">
-                <div class="track-name">${i+1}. ${t.name}</div>
-                <div class="track-artist">${t.artist}</div>
-            </div>
-            <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(t.uri)}, ${JSON.stringify(t.name)}, ${JSON.stringify(t.artist)}, event)'>⏭️ Queue</button>
-            </div>
-        </div>`).join('');
-}
-
-// ------------------ NOW PLAYING ------------------
-async function loadNowPlaying() {
-    safeHaptic('impactOccurred', 'light');
-
-    const content = document.getElementById('nowPlayingContent');
-    content.innerHTML = '<div class="loading">Chargement...</div>';
-
-    try {
-        const response = await fetch(CONFIG.N8N_WEBHOOK_NOW_PLAYING);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-
-        if (data.playing && data.track) {
-            content.innerHTML = `
-                <div class='now-playing-content'>
-                    <div class='now-playing-cover'>${data.track.image?`<img src='${data.track.image}'>`:'🎵'}</div>
-                    <div class='now-playing-info'>
-                        <div class='now-playing-track'>${data.track.name}</div>
-                        <div class='now-playing-artist'>${data.track.artist}</div>
+            trackList.innerHTML = tracks.map(track => `
+                <div class="track-item">
+                    <div class="track-cover">
+                        ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
                     </div>
-                </div>`;
-            showToast(`🎧 En cours : ${data.track.name}`);
-        } else {
-            content.innerHTML = '<div class="now-playing-empty">⏸️ Aucune lecture</div>';
-            showToast('⏸️ Aucune lecture en cours');
+                    <div class="track-info">
+                        <div class="track-name">${escapeHtml(track.name)}</div>
+                        <div class="track-artist">${escapeHtml(track.artist)}</div>
+                    </div>
+                    <div class="track-actions">
+                        <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
+                            ⏭️ Queue
+                        </button>
+                        <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
+                            📋 Otera
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
-    } catch (e) {
-        content.innerHTML = `<div class='now-playing-empty'>❌ ${e.message}</div>`;
-        showToast(`❌ ${e.message}`);
-    }
-}
+        // Ajouter à la queue
+        async function addToQueue(uri, name, artist, event) {
+            if (event) event.stopPropagation();
+            
+            try {
+                tg.HapticFeedback.impactOccurred('medium');
+                
+                const userId = tg.initDataUnsafe?.user?.id || 'demo';
+                
+                debugLog('Ajout queue', { uri, name, artist });
+                
+                const response = await fetch(CONFIG.N8N_WEBHOOK_ADD, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        track_uri: uri,
+                        track_name: name,
+                        track_artist: artist
+                    })
+                });
 
-// ------------------ TOAST ------------------
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(()=> t.classList.remove('show'), 3000);
-}
+                debugLog('Response add', response.status);
 
-// ------------------ AUTOLOAD ------------------
-setTimeout(()=>{
-    loadNowPlaying();
-    const name = tg.initDataUnsafe?.user?.first_name;
-    if (name) setTimeout(()=> showToast(`👋 Salut ${name} !`), 1000);
-},500);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
 
-setInterval(()=>{
-    if (!results.classList.contains('active')) loadNowPlaying();
-},30000);
-</script>
+                const result = await response.json();
+                debugLog('Result add', result);
 
+                showToast(`⏭️ "${name}" ajouté à la queue !`);
+                tg.HapticFeedback.notificationOccurred('success');
+            } catch (error) {
+                console.error('Erreur ajout queue:', error);
+                debugLog('Erreur add queue', error.message);
+                showToast(`❌ Erreur: ${error.message}`);
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+        }
+
+        // Ajouter à la playlist Otera
+        async function addToPlaylist(uri, name, artist, event) {
+            if (event) event.stopPropagation();
+            
+            try {
+                tg.HapticFeedback.impactOccurred('medium');
+                
+                const userId = tg.initDataUnsafe?.user?.id || 'demo';
+                
+                debugLog('Ajout playlist', { uri, name, artist });
+                
+                const response = await fetch(CONFIG.N8N_WEBHOOK_ADD_PLAYLIST, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        track_uri: uri,
+                        track_name: name,
+                        track_artist: artist,
+                        playlist_id: CONFIG.PLAYLIST_ID
+                    })
+                });
+
+                debugLog('Response add playlist', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                debugLog('Result add playlist', result);
+
+                showToast(`📋 "${name}" ajouté à Otera !`);
+                tg.HapticFeedback.notificationOccurred('success');
+            } catch (error) {
+                console.error('Erreur ajout playlist:', error);
+                debugLog('Erreur add playlist', error.message);
+                showToast(`❌ Erreur: ${error.message}`);
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+        }
+
+        // Toggle affichage playlist
+        async function togglePlaylist() {
+            tg.HapticFeedback.impactOccurred('light');
+            
+            playlistVisible = !playlistVisible;
+            
+            if (playlistVisible) {
+                results.classList.remove('active');
+                playlistSection.classList.add('active');
+                searchInput.value = '';
+                await loadPlaylist();
+            } else {
+                playlistSection.classList.remove('active');
+            }
+        }
+
+        // Charger la playlist
+        async function loadPlaylist() {
+            try {
+                playlistTracks.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Chargement...</div>';
+                
+                const url = `${CONFIG.N8N_WEBHOOK_GET_PLAYLIST}?playlist_id=${CONFIG.PLAYLIST_ID}`;
+                
+                debugLog('Playlist URL', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                debugLog('Response playlist', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                debugLog('Playlist data', data);
+                
+                displayPlaylistTracks(data.tracks || [], data.total || 0);
+            } catch (error) {
+                console.error('Erreur playlist:', error);
+                debugLog('Erreur playlist', error.message);
+                playlistTracks.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Erreur: ${error.message}</p></div>`;
+                showToast(`❌ ${error.message}`);
+            }
+        }
+
+        // Afficher les tracks de la playlist
+        function displayPlaylistTracks(tracks, total) {
+            document.getElementById('playlistCount').textContent = `${total} musique${total > 1 ? 's' : ''}`;
+            
+            if (!tracks || tracks.length === 0) {
+                playlistTracks.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>La playlist est vide</p></div>';
+                return;
+            }
+
+            playlistTracks.innerHTML = tracks.map((track, index) => `
+                <div class="track-item">
+                    <div class="track-cover">
+                        ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
+                    </div>
+                    <div class="track-info">
+                        <div class="track-name">${index + 1}. ${escapeHtml(track.name)}</div>
+                        <div class="track-artist">${escapeHtml(track.artist)}</div>
+                    </div>
+                    <div class="track-actions">
+                        <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
+                            ⏭️ Queue
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Suivre la playlist sur Spotify (ouvre Spotify)
+        function followPlaylist() {
+            try {
+                tg.HapticFeedback.impactOccurred('medium');
+                
+                debugLog('Opening Spotify playlist', { playlist_id: CONFIG.PLAYLIST_ID });
+                
+                // Ouvrir Spotify avec la playlist
+                const spotifyUrl = `https://open.spotify.com/playlist/${CONFIG.PLAYLIST_ID}`;
+                window.open(spotifyUrl, '_blank');
+                
+                showToast(`📱 Ouverture de Spotify...`);
+                tg.HapticFeedback.notificationOccurred('success');
+            } catch (error) {
+                console.error('Erreur ouverture Spotify:', error);
+                debugLog('Erreur open spotify', error.message);
+                showToast(`❌ Erreur: ${error.message}`);
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+        }
+
+        // Charger la musique en cours
+        async function loadNowPlaying() {
+            try {
+                tg.HapticFeedback.impactOccurred('light');
+                
+                const content = document.getElementById('nowPlayingContent');
+                content.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+                
+                const url = `${CONFIG.N8N_WEBHOOK_NOW_PLAYING}`;
+                
+                debugLog('Now Playing URL', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                debugLog('Response now playing', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                debugLog('Now playing data', data);
+                
+                if (data.playing && data.track) {
+                    content.innerHTML = `
+                        <div class="now-playing-content">
+                            <div class="now-playing-cover">
+                                ${data.track.image ? `<img src="${data.track.image}" alt="${escapeHtml(data.track.name)}">` : '🎵'}
+                            </div>
+                            <div class="now-playing-info">
+                                <div class="now-playing-track">${escapeHtml(data.track.name)}</div>
+                                <div class="now-playing-artist">${escapeHtml(data.track.artist)}</div>
+                            </div>
+                        </div>
+                    `;
+                    showToast(`🎧 En cours: ${data.track.name}`);
+                } else {
+                    content.innerHTML = '<div class="now-playing-empty">⏸️ Aucune lecture en cours</div>';
+                    showToast('⏸️ Aucune lecture en cours');
+                }
+            } catch (error) {
+                console.error('Erreur now playing:', error);
+                debugLog('Erreur now playing', error.message);
+                document.getElementById('nowPlayingContent').innerHTML = `<div class="now-playing-empty">❌ ${error.message}</div>`;
+                showToast(`❌ Erreur: ${error.message}`);
+            }
+        }
+
+        // Afficher un toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Échapper HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Charger la musique en cours au démarrage
+        setTimeout(() => {
+            loadNowPlaying();
+            
+            const userName = tg.initDataUnsafe?.user?.first_name;
+            if (userName) {
+                setTimeout(() => showToast(`👋 Salut ${userName} !`), 1000);
+            }
+        }, 500);
+
+        // Auto-refresh toutes les 30 secondes
+        setInterval(() => {
+            if (!results.classList.contains('active')) {
+                loadNowPlaying();
+            }
+        }, 30000);
+    </script>
 </body>
 </html>
