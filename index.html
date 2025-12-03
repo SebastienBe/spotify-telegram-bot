@@ -449,12 +449,12 @@
             N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
             N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
             N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
-            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
+            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-get-playlist',
             N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
             PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS'
         };
 
-        // Debug mode
+        // Debug mode - ACTIVÉ pour diagnostiquer le problème
         const DEBUG = true;
 
         function debugLog(message, data) {
@@ -628,19 +628,30 @@
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
+                    let errorText = '';
+                    try {
+                        errorText = await response.text();
+                    } catch (e) {
+                        errorText = 'Impossible de lire la réponse';
+                    }
                     debugLog('Error response text', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
                 }
 
-                // Vérifier si la réponse contient du JSON
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const result = await response.json();
-                    debugLog('Result add', result);
+                // Lire la réponse comme texte d'abord
+                const responseText = await response.text();
+                debugLog('Response text', responseText);
+
+                // Essayer de parser en JSON seulement si non vide
+                if (responseText && responseText.trim().length > 0) {
+                    try {
+                        const result = JSON.parse(responseText);
+                        debugLog('Result add (JSON)', result);
+                    } catch (jsonError) {
+                        debugLog('Response is not JSON', responseText);
+                    }
                 } else {
-                    const textResult = await response.text();
-                    debugLog('Text response', textResult);
+                    debugLog('Empty response from webhook', 'Response is empty but status is OK');
                 }
 
                 showToast(`⭐️ "${name}" ajouté à la queue !`);
@@ -665,7 +676,18 @@
                 
                 const userId = tg.initDataUnsafe?.user?.id || 'demo';
                 
-                debugLog('Ajout playlist', { uri, name, artist, userId });
+                const payload = {
+                    user_id: userId,
+                    track_uri: uri,
+                    track_name: name,
+                    track_artist: artist,
+                    playlist_id: CONFIG.PLAYLIST_ID
+                };
+                
+                debugLog('🔵 Envoi vers N8N ADD_PLAYLIST', {
+                    url: CONFIG.N8N_WEBHOOK_ADD_PLAYLIST,
+                    payload: payload
+                });
                 
                 const response = await fetch(CONFIG.N8N_WEBHOOK_ADD_PLAYLIST, {
                     method: 'POST',
@@ -673,46 +695,83 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        track_uri: uri,
-                        track_name: name,
-                        track_artist: artist,
-                        playlist_id: CONFIG.PLAYLIST_ID
-                    })
+                    body: JSON.stringify(payload)
                 });
 
-                debugLog('Response add playlist', {
+                debugLog('🟢 Réponse N8N', {
                     status: response.status,
                     statusText: response.statusText,
-                    contentType: response.headers.get('content-type')
+                    ok: response.ok,
+                    contentType: response.headers.get('content-type'),
+                    contentLength: response.headers.get('content-length')
                 });
 
+                // Log toutes les headers pour debug
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    headers[key] = value;
+                });
+                debugLog('📋 Headers complets', headers);
+
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    debugLog('Error response text', errorText);
-                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+                    let errorText = '';
+                    try {
+                        errorText = await response.text();
+                    } catch (e) {
+                        errorText = 'Impossible de lire la réponse d\'erreur';
+                    }
+                    debugLog('❌ Erreur du serveur', errorText);
+                    throw new Error(`Serveur: ${response.status} - ${errorText || response.statusText}`);
                 }
 
-                // Vérifier si la réponse contient du JSON
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const result = await response.json();
-                    debugLog('Result add playlist', result);
+                // Lire la réponse comme texte d'abord
+                let responseText = '';
+                try {
+                    responseText = await response.text();
+                    debugLog('📄 Texte brut de la réponse', {
+                        length: responseText.length,
+                        isEmpty: responseText.trim().length === 0,
+                        preview: responseText.substring(0, 200)
+                    });
+                } catch (e) {
+                    debugLog('⚠️ Impossible de lire le texte', e.message);
+                }
+
+                // Essayer de parser en JSON seulement si non vide
+                if (responseText && responseText.trim().length > 0) {
+                    try {
+                        const result = JSON.parse(responseText);
+                        debugLog('✅ JSON parsé avec succès', result);
+                        
+                        // Vérifier si le webhook retourne une erreur
+                        if (result.error) {
+                            throw new Error(result.error);
+                        }
+                    } catch (jsonError) {
+                        if (jsonError.message.includes('Unexpected')) {
+                            debugLog('⚠️ Réponse non-JSON', {
+                                text: responseText,
+                                error: jsonError.message
+                            });
+                        } else {
+                            throw jsonError;
+                        }
+                    }
                 } else {
-                    const textResult = await response.text();
-                    debugLog('Text response', textResult);
+                    debugLog('⚠️ Réponse vide du webhook', 'Le webhook a répondu 200 OK mais sans contenu');
                 }
 
                 showToast(`📋 "${name}" ajouté à Otera !`);
                 safeHaptic('notificationOccurred', 'success');
+                
             } catch (error) {
-                console.error('Erreur ajout playlist:', error);
-                debugLog('Erreur add playlist', {
+                console.error('❌ ERREUR COMPLÈTE:', error);
+                debugLog('❌ Erreur détaillée', {
+                    name: error.name,
                     message: error.message,
-                    stack: error.stack
+                    stack: error.stack?.substring(0, 300)
                 });
-                showToast(`❌ Erreur: ${error.message}`);
+                showToast(`❌ ${error.message}`);
                 safeHaptic('notificationOccurred', 'error');
             }
         }
