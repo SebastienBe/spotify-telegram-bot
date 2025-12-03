@@ -148,6 +148,77 @@
             opacity: 0.8;
         }
 
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .quick-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        .quick-btn.btn-follow {
+            background: #1DB954;
+            color: white;
+        }
+
+        .quick-btn:active {
+            transform: scale(0.95);
+        }
+
+        .playlist-section {
+            display: none;
+            margin-bottom: 24px;
+        }
+
+        .playlist-section.active {
+            display: block;
+        }
+
+        .playlist-header {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: var(--tg-theme-secondary-bg-color, #f4f4f4);
+            border-radius: 12px;
+        }
+
+        .playlist-info {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .playlist-cover {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #1DB954 0%, #1ed760 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .playlist-details h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .playlist-details p {
+            opacity: 0.6;
+            font-size: 14px;
+        }
+
         .results {
             display: none;
         }
@@ -366,7 +437,7 @@
     </div>
 
     <div class="results" id="results">
-        <div class="section-title">📀 Résultats</div>
+        <div class="section-title">💿 Résultats</div>
         <div id="trackList"></div>
     </div>
 
@@ -378,12 +449,12 @@
             N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
             N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
             N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
-            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
+            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-get-playlist',
             N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
-            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS' // ID de votre playlist Otera
+            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS'
         };
 
-        // Debug mode - mettre à true pour voir les détails
+        // Debug mode
         const DEBUG = true;
 
         function debugLog(message, data) {
@@ -393,6 +464,28 @@
                 debugDiv.style.display = 'block';
                 debugDiv.innerHTML = `${message}<br>${JSON.stringify(data).substring(0, 100)}`;
             }
+        }
+
+        // Fonction safeHaptic pour compatibilité Telegram WebApp
+        function safeHaptic(action, style) {
+            try {
+                if (!tg?.HapticFeedback || typeof tg.HapticFeedback[action] !== "function") {
+                    return;
+                }
+                // Version 6.0 : essai sans paramètre
+                try {
+                    tg.HapticFeedback[action]();
+                    return;
+                } catch (e1) {
+                    // Si échec, on teste avec le style
+                }
+                // Version plus récente : avec le style
+                try {
+                    tg.HapticFeedback[action](style);
+                } catch (e2) {
+                    // On abandonne silencieusement
+                }
+            } catch (_) {}
         }
 
         // Initialiser Telegram WebApp
@@ -432,7 +525,6 @@
                 return;
             }
 
-            // Cacher la playlist quand on recherche
             playlistSection.classList.remove('active');
             playlistVisible = false;
 
@@ -494,7 +586,7 @@
                     </div>
                     <div class="track-actions">
                         <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
-                            ⏭️ Queue
+                            ⭐️ Queue
                         </button>
                         <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
                             📋 Otera
@@ -509,7 +601,7 @@
             if (event) event.stopPropagation();
             
             try {
-                tg.HapticFeedback.impactOccurred('medium');
+                safeHaptic('impactOccurred', 'medium');
                 
                 const userId = tg.initDataUnsafe?.user?.id || 'demo';
                 
@@ -538,13 +630,13 @@
                 const result = await response.json();
                 debugLog('Result add', result);
 
-                showToast(`⏭️ "${name}" ajouté à la queue !`);
-                tg.HapticFeedback.notificationOccurred('success');
+                showToast(`⭐️ "${name}" ajouté à la queue !`);
+                safeHaptic('notificationOccurred', 'success');
             } catch (error) {
                 console.error('Erreur ajout queue:', error);
                 debugLog('Erreur add queue', error.message);
                 showToast(`❌ Erreur: ${error.message}`);
-                tg.HapticFeedback.notificationOccurred('error');
+                safeHaptic('notificationOccurred', 'error');
             }
         }
 
@@ -553,7 +645,7 @@
             if (event) event.stopPropagation();
             
             try {
-                tg.HapticFeedback.impactOccurred('medium');
+                safeHaptic('impactOccurred', 'medium');
                 
                 const userId = tg.initDataUnsafe?.user?.id || 'demo';
                 
@@ -584,18 +676,18 @@
                 debugLog('Result add playlist', result);
 
                 showToast(`📋 "${name}" ajouté à Otera !`);
-                tg.HapticFeedback.notificationOccurred('success');
+                safeHaptic('notificationOccurred', 'success');
             } catch (error) {
                 console.error('Erreur ajout playlist:', error);
                 debugLog('Erreur add playlist', error.message);
                 showToast(`❌ Erreur: ${error.message}`);
-                tg.HapticFeedback.notificationOccurred('error');
+                safeHaptic('notificationOccurred', 'error');
             }
         }
 
         // Toggle affichage playlist
         async function togglePlaylist() {
-            tg.HapticFeedback.impactOccurred('light');
+            safeHaptic('impactOccurred', 'light');
             
             playlistVisible = !playlistVisible;
             
@@ -663,38 +755,37 @@
                     </div>
                     <div class="track-actions">
                         <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
-                            ⏭️ Queue
+                            ⭐️ Queue
                         </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // Suivre la playlist sur Spotify (ouvre Spotify)
+        // Suivre la playlist sur Spotify
         function followPlaylist() {
             try {
-                tg.HapticFeedback.impactOccurred('medium');
+                safeHaptic('impactOccurred', 'medium');
                 
                 debugLog('Opening Spotify playlist', { playlist_id: CONFIG.PLAYLIST_ID });
                 
-                // Ouvrir Spotify avec la playlist
                 const spotifyUrl = `https://open.spotify.com/playlist/${CONFIG.PLAYLIST_ID}`;
                 window.open(spotifyUrl, '_blank');
                 
                 showToast(`📱 Ouverture de Spotify...`);
-                tg.HapticFeedback.notificationOccurred('success');
+                safeHaptic('notificationOccurred', 'success');
             } catch (error) {
                 console.error('Erreur ouverture Spotify:', error);
                 debugLog('Erreur open spotify', error.message);
                 showToast(`❌ Erreur: ${error.message}`);
-                tg.HapticFeedback.notificationOccurred('error');
+                safeHaptic('notificationOccurred', 'error');
             }
         }
 
         // Charger la musique en cours
         async function loadNowPlaying() {
             try {
-                tg.HapticFeedback.impactOccurred('light');
+                safeHaptic('impactOccurred', 'light');
                 
                 const content = document.getElementById('nowPlayingContent');
                 content.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
