@@ -1,332 +1,501 @@
-// Configuration
+// ============================================
+// CONFIGURATION
+// ============================================
 const CONFIG = {
-    N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
-    N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
-    N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
-    N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
-    N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
-    PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS'
+    N8N_WEBHOOK_BASE: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-bot',
+    PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS',
+    DEMO_MODE: false
 };
 
-const DEBUG = false;
+const DEBUG = true;
 
 function debugLog(message, data) {
-    if (DEBUG) console.log(`[DEBUG] ${message}`, data);
+    if (DEBUG) console.log(`[DEBUG] ${message}`, data || '');
 }
 
-function safeHaptic(action, style) {
-    try {
-        if (!tg?.HapticFeedback || typeof tg.HapticFeedback[action] !== "function") return;
-        try { tg.HapticFeedback[action](); return; } catch (e1) {}
-        try { tg.HapticFeedback[action](style); } catch (e2) {}
-    } catch (_) {}
-}
-
-// Initialisation Telegram
+// ============================================
+// TELEGRAM WEB APP
+// ============================================
 let tg;
 try {
     tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
-    debugLog('Telegram WebApp initialisé', { user: tg.initDataUnsafe?.user });
+    tg.enableClosingConfirmation();
+    
+    // Configuration du thème
+    tg.setHeaderColor('#1a1a1a');
+    tg.setBackgroundColor('#121212');
+    
+    debugLog('Telegram WebApp initialisé', {
+        user: tg.initDataUnsafe?.user,
+        platform: tg.platform,
+        version: tg.version
+    });
 } catch (error) {
     console.error('Erreur init Telegram:', error);
-    tg = { 
-        initDataUnsafe: { user: { id: 'demo' } },
-        HapticFeedback: { impactOccurred: () => {}, notificationOccurred: () => {} }
+    tg = {
+        initDataUnsafe: { user: { id: 'demo', first_name: 'Demo' } },
+        HapticFeedback: {
+            impactOccurred: () => {},
+            notificationOccurred: () => {},
+            selectionChanged: () => {}
+        },
+        platform: 'unknown',
+        ready: () => {},
+        expand: () => {}
     };
 }
 
-// Variables globales
-let searchTimeout;
-let playlistVisible = false;
-const searchInput = document.getElementById('searchInput');
-const results = document.getElementById('results');
-const trackList = document.getElementById('trackList');
-const playlistSection = document.getElementById('playlistSection');
-const playlistTracks = document.getElementById('playlistTracks');
+// ============================================
+// HAPTIC FEEDBACK
+// ============================================
+function safeHaptic(action, style) {
+    try {
+        if (!tg?.HapticFeedback || typeof tg.HapticFeedback[action] !== "function") return;
+        
+        if (action === 'impactOccurred' && style) {
+            try {
+                tg.HapticFeedback[action](style);
+            } catch (e) {
+                tg.HapticFeedback[action]();
+            }
+        } else if (action === 'notificationOccurred' && style) {
+            try {
+                tg.HapticFeedback[action](style);
+            } catch (e) {
+                tg.HapticFeedback[action]();
+            }
+        } else {
+            tg.HapticFeedback[action]();
+        }
+    } catch (error) {
+        debugLog('Haptic error', error.message);
+    }
+}
 
-// Event listener recherche
-searchInput.addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    const query = e.target.value.trim();
+// ============================================
+// API N8N - FONCTION GÉNÉRIQUE
+// ============================================
+async function callN8N(action, payload = {}) {
+    debugLog(`Appel n8n - Action: ${action}`, payload);
     
-    if (query.length < 2) {
-        results.classList.remove('active');
+    try {
+        const body = {
+            action,
+            userId: tg.initDataUnsafe?.user?.id || 'demo',
+            ...payload
+        };
+        
+        debugLog('Request body', body);
+        
+        const response = await fetch(CONFIG.N8N_WEBHOOK_BASE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        
+        debugLog('Response status', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            debugLog('Error response', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        debugLog('Response data', data);
+        
+        if (data.status === 'error') {
+            throw new Error(data.message || 'Erreur inconnue');
+        }
+        
+        return data;
+    } catch (error) {
+        console.error(`❌ Erreur ${action}:`, error);
+        throw error;
+    }
+}
+
+// ============================================
+// SEARCH - RECHERCHE DE TRACKS
+// ============================================
+async function searchTracks(query) {
+    const trackList = document.getElementById('trackList');
+    
+    if (!query || query.trim() === '') {
+        trackList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <p>Tapez quelque chose pour rechercher</p>
+            </div>
+        `;
         return;
     }
     
-    playlistSection.classList.remove('active');
-    playlistVisible = false;
-    trackList.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Recherche en cours...</div>';
-    results.classList.add('active');
-    searchTimeout = setTimeout(() => searchTracks(query), 500);
-});
-
-// Rechercher des tracks
-async function searchTracks(query) {
+    // Loader
+    trackList.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Recherche en cours...</p>
+        </div>
+    `;
+    
     try {
-        const url = `${CONFIG.N8N_WEBHOOK_SEARCH}?q=${encodeURIComponent(query)}`;
-        const response = await fetch(url, { 
-            method: 'GET', 
-            headers: { 'Accept': 'application/json' } 
-        });
+        safeHaptic('impactOccurred', 'light');
+        const data = await callN8N('search', { q: query });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!data.tracks || data.tracks.length === 0) {
+            trackList.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">😕</div>
+                    <p>Aucun résultat pour "${query}"</p>
+                </div>
+            `;
+            return;
+        }
         
-        const data = await response.json();
-        displayTracks(data.tracks || []);
+        displayTracks(data.tracks);
+        safeHaptic('notificationOccurred', 'success');
     } catch (error) {
-        console.error('Erreur:', error);
-        trackList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Erreur: ${error.message}</p></div>`;
+        trackList.innerHTML = `
+            <div class="empty-state error">
+                <div class="empty-state-icon">❌</div>
+                <p>Erreur: ${error.message}</p>
+                <button onclick="searchTracks('${escapeHtml(query)}')" class="retry-btn">Réessayer</button>
+            </div>
+        `;
+        safeHaptic('notificationOccurred', 'error');
         showToast(`❌ ${error.message}`);
     }
 }
 
-// Afficher les tracks
+// ============================================
+// DISPLAY TRACKS - AFFICHAGE RÉSULTATS
+// ============================================
 function displayTracks(tracks) {
-    if (!tracks || tracks.length === 0) {
-        trackList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>Aucun résultat trouvé</p></div>';
-        return;
-    }
+    const trackList = document.getElementById('trackList');
     
-    trackList.innerHTML = tracks.map(track => `
-        <div class="track-item">
-            <div class="track-cover">
-                ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
-            </div>
+    trackList.innerHTML = tracks.map((track, index) => `
+        <div class="track-item" data-index="${index}">
+            <img src="${track.image || 'https://via.placeholder.com/60'}" 
+                 alt="${escapeHtml(track.name)}"
+                 onerror="this.src='https://via.placeholder.com/60'">
             <div class="track-info">
                 <div class="track-name">${escapeHtml(track.name)}</div>
                 <div class="track-artist">${escapeHtml(track.artist)}</div>
+                <div class="track-duration">${formatDuration(track.duration)}</div>
             </div>
-            <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Queue</button>
-                <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Otera</button>
-            </div>
+            <button class="add-btn" 
+                    onclick="addToQueue('${escapeHtml(track.uri)}', \`${escapeHtml(track.name)}\`, \`${escapeHtml(track.artist)}\`, event)"
+                    title="Ajouter à la queue">
+                <span class="add-icon">+</span>
+            </button>
         </div>
     `).join('');
 }
 
-// Ajouter à la queue
+// ============================================
+// ADD TO QUEUE - AJOUTER UN TRACK
+// ============================================
 async function addToQueue(uri, name, artist, event) {
-    if (event) event.stopPropagation();
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    debugLog('Add to queue', { uri, name, artist });
+    
+    const button = event?.target.closest('.add-btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<div class="spinner-small"></div>';
+    }
     
     try {
         safeHaptic('impactOccurred', 'medium');
-        const userId = tg.initDataUnsafe?.user?.id || 'demo';
         
-        const response = await fetch(CONFIG.N8N_WEBHOOK_ADD, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Accept': 'application/json' 
-            },
-            body: JSON.stringify({ 
-                user_id: userId, 
-                track_uri: uri, 
-                track_name: name, 
-                track_artist: artist 
-            })
+        await callN8N('add', { 
+            uri, 
+            name,
+            artist 
         });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const responseText = await response.text();
-        if (responseText?.trim()) {
-            try { JSON.parse(responseText); } catch (e) {}
-        }
         
         showToast(`✓ "${name}" ajouté à la queue`);
         safeHaptic('notificationOccurred', 'success');
-    } catch (error) {
-        console.error('Erreur:', error);
-        showToast(`❌ ${error.message}`);
-        safeHaptic('notificationOccurred', 'error');
-    }
-}
-
-// Ajouter à la playlist
-async function addToPlaylist(uri, name, artist, event) {
-    if (event) event.stopPropagation();
-    
-    try {
-        safeHaptic('impactOccurred', 'medium');
-        const userId = tg.initDataUnsafe?.user?.id || 'demo';
         
-        const response = await fetch(CONFIG.N8N_WEBHOOK_ADD_PLAYLIST, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Accept': 'application/json' 
-            },
-            body: JSON.stringify({ 
-                user_id: userId, 
-                track_uri: uri, 
-                track_name: name, 
-                track_artist: artist, 
-                playlist_id: CONFIG.PLAYLIST_ID 
-            })
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const responseText = await response.text();
-        if (responseText?.trim()) {
-            try {
-                const result = JSON.parse(responseText);
-                if (result.error) throw new Error(result.error);
-            } catch (e) {}
+        if (button) {
+            button.innerHTML = '✓';
+            button.classList.add('success');
+            setTimeout(() => {
+                button.innerHTML = '<span class="add-icon">+</span>';
+                button.classList.remove('success');
+                button.disabled = false;
+            }, 2000);
         }
-        
-        showToast(`✓ "${name}" ajouté à Otera`);
-        safeHaptic('notificationOccurred', 'success');
     } catch (error) {
-        console.error('Erreur:', error);
-        showToast(`❌ ${error.message}`);
+        showToast(`❌ Erreur: ${error.message}`);
         safeHaptic('notificationOccurred', 'error');
+        
+        if (button) {
+            button.innerHTML = '<span class="add-icon">+</span>';
+            button.disabled = false;
+        }
     }
 }
 
-// Toggle playlist
-async function togglePlaylist() {
-    safeHaptic('impactOccurred', 'light');
-    playlistVisible = !playlistVisible;
+// ============================================
+// NOW PLAYING - LECTURE EN COURS
+// ============================================
+async function updateNowPlaying() {
+    const nowPlayingEl = document.getElementById('nowPlaying');
     
-    if (playlistVisible) {
-        results.classList.remove('active');
-        playlistSection.classList.add('active');
-        searchInput.value = '';
-        await loadPlaylist();
-    } else {
-        playlistSection.classList.remove('active');
-    }
-}
-
-// Charger la playlist
-async function loadPlaylist() {
     try {
-        playlistTracks.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Chargement...</div>';
+        const data = await callN8N('nowPlaying');
         
-        const url = `${CONFIG.N8N_WEBHOOK_GET_PLAYLIST}?playlist_id=${CONFIG.PLAYLIST_ID}`;
-        const response = await fetch(url, { 
-            method: 'GET', 
-            headers: { 'Accept': 'application/json' } 
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        displayPlaylistTracks(data.tracks || [], data.total || 0);
-    } catch (error) {
-        console.error('Erreur:', error);
-        playlistTracks.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Erreur: ${error.message}</p></div>`;
-        showToast(`❌ ${error.message}`);
-    }
-}
-
-// Afficher les tracks de la playlist
-function displayPlaylistTracks(tracks, total) {
-    document.getElementById('playlistCount').textContent = `${total} titre${total > 1 ? 's' : ''}`;
-    
-    if (!tracks || tracks.length === 0) {
-        playlistTracks.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>La playlist est vide</p></div>';
-        return;
-    }
-    
-    playlistTracks.innerHTML = tracks.map((track, index) => `
-        <div class="track-item">
-            <div class="track-cover">
-                ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
-            </div>
-            <div class="track-info">
-                <div class="track-name">${index + 1}. ${escapeHtml(track.name)}</div>
-                <div class="track-artist">${escapeHtml(track.artist)}</div>
-            </div>
-            <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Queue</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Suivre la playlist sur Spotify
-function followPlaylist() {
-    try {
-        safeHaptic('impactOccurred', 'medium');
-        window.open(`https://open.spotify.com/playlist/${CONFIG.PLAYLIST_ID}`, '_blank');
-        showToast(`📱 Ouverture de Spotify...`);
-        safeHaptic('notificationOccurred', 'success');
-    } catch (error) {
-        console.error('Erreur:', error);
-        showToast(`❌ ${error.message}`);
-        safeHaptic('notificationOccurred', 'error');
-    }
-}
-
-// Charger la musique en cours
-async function loadNowPlaying() {
-    try {
-        safeHaptic('impactOccurred', 'light');
-        const content = document.getElementById('nowPlayingContent');
-        content.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
-        
-        const response = await fetch(CONFIG.N8N_WEBHOOK_NOW_PLAYING, { 
-            method: 'GET', 
-            headers: { 'Accept': 'application/json' } 
-        });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        
-        if (data.playing && data.track) {
-            content.innerHTML = `
-                <div class="now-playing-content">
-                    <div class="now-playing-cover">
-                        ${data.track.image ? `<img src="${data.track.image}" alt="${escapeHtml(data.track.name)}">` : '🎵'}
-                    </div>
-                    <div class="now-playing-info">
-                        <div class="now-playing-track">${escapeHtml(data.track.name)}</div>
-                        <div class="now-playing-artist">${escapeHtml(data.track.artist)}</div>
-                    </div>
+        if (!data.track || !data.track.name) {
+            nowPlayingEl.innerHTML = `
+                <div class="now-playing-empty">
+                    <div class="empty-icon">🎵</div>
+                    <p>Aucune lecture en cours</p>
                 </div>
             `;
-            showToast(`🎧 ${data.track.name}`);
-        } else {
-            content.innerHTML = '<div class="now-playing-empty">Aucune lecture en cours</div>';
-            showToast('Aucune lecture en cours');
+            return;
         }
+        
+        const track = data.track;
+        const progress = (track.progress / track.duration) * 100;
+        
+        nowPlayingEl.innerHTML = `
+            <div class="now-playing-container ${track.is_playing ? 'playing' : 'paused'}">
+                <div class="now-playing-cover">
+                    <img src="${track.image || 'https://via.placeholder.com/200'}" 
+                         alt="${escapeHtml(track.name)}">
+                    ${track.is_playing ? '<div class="playing-indicator"></div>' : ''}
+                </div>
+                <div class="now-playing-info">
+                    <div class="now-playing-track">${escapeHtml(track.name)}</div>
+                    <div class="now-playing-artist">${escapeHtml(track.artist)}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="progress-time">
+                        <span>${formatDuration(track.progress)}</span>
+                        <span>${formatDuration(track.duration)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
     } catch (error) {
-        console.error('Erreur:', error);
-        document.getElementById('nowPlayingContent').innerHTML = `<div class="now-playing-empty">❌ ${error.message}</div>`;
+        debugLog('Erreur nowPlaying', error.message);
+        nowPlayingEl.innerHTML = `
+            <div class="now-playing-empty error">
+                <div class="empty-icon">❌</div>
+                <p>Erreur de connexion Spotify</p>
+            </div>
+        `;
+    }
+}
+
+// ============================================
+// PLAYLIST - AFFICHAGE PLAYLIST
+// ============================================
+async function loadPlaylist() {
+    const playlistContainer = document.getElementById('playlistContainer');
+    
+    playlistContainer.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Chargement de la playlist...</p>
+        </div>
+    `;
+    
+    try {
+        const data = await callN8N('getPlaylist', { 
+            playlistId: CONFIG.PLAYLIST_ID 
+        });
+        
+        if (!data.tracks || data.tracks.length === 0) {
+            playlistContainer.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>La playlist est vide</p>
+                </div>
+            `;
+            return;
+        }
+        
+        displayPlaylist(data.tracks);
+    } catch (error) {
+        playlistContainer.innerHTML = `
+            <div class="empty-state error">
+                <div class="empty-state-icon">❌</div>
+                <p>Erreur: ${error.message}</p>
+                <button onclick="loadPlaylist()" class="retry-btn">Réessayer</button>
+            </div>
+        `;
         showToast(`❌ ${error.message}`);
     }
 }
 
-// Afficher un toast
+function displayPlaylist(tracks) {
+    const playlistContainer = document.getElementById('playlistContainer');
+    
+    playlistContainer.innerHTML = `
+        <div class="playlist-header">
+            <h3>Playlist (${tracks.length} tracks)</h3>
+        </div>
+        <div class="playlist-tracks">
+            ${tracks.map((track, index) => `
+                <div class="track-item playlist-track" data-position="${track.position || index}">
+                    <div class="track-position">${index + 1}</div>
+                    <img src="${track.image || 'https://via.placeholder.com/60'}" 
+                         alt="${escapeHtml(track.name)}">
+                    <div class="track-info">
+                        <div class="track-name">${escapeHtml(track.name)}</div>
+                        <div class="track-artist">${escapeHtml(track.artist)}</div>
+                    </div>
+                    <button class="delete-btn" 
+                            onclick="deleteTrack('${escapeHtml(track.uri)}', ${track.position || index}, event)"
+                            title="Supprimer">
+                        🗑️
+                    </button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// ============================================
+// DELETE TRACK - SUPPRIMER UN TRACK
+// ============================================
+async function deleteTrack(uri, position, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    const confirmed = confirm('Supprimer ce track de la playlist ?');
+    if (!confirmed) return;
+    
+    try {
+        safeHaptic('impactOccurred', 'heavy');
+        
+        await callN8N('deleteTrack', { 
+            uri,
+            position,
+            playlistId: CONFIG.PLAYLIST_ID 
+        });
+        
+        showToast('✓ Track supprimé');
+        safeHaptic('notificationOccurred', 'success');
+        
+        // Recharger la playlist
+        setTimeout(loadPlaylist, 500);
+    } catch (error) {
+        showToast(`❌ ${error.message}`);
+        safeHaptic('notificationOccurred', 'error');
+    }
+}
+
+// ============================================
+// UTILITAIRES
+// ============================================
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/`/g, "&#96;");
+}
+
+function formatDuration(ms) {
+    if (!ms) return '0:00';
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
 function showToast(message) {
     const toast = document.getElementById('toast');
+    if (!toast) return;
+    
     toast.textContent = message;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
 }
 
-// Échapper HTML
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// ============================================
+// TABS NAVIGATION
+// ============================================
+function switchTab(tabName) {
+    safeHaptic('selectionChanged');
+    
+    // Cacher tous les contenus
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Désactiver tous les boutons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Activer le contenu et le bouton sélectionné
+    const selectedContent = document.getElementById(`${tabName}-tab`);
+    const selectedBtn = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+    
+    if (selectedContent) selectedContent.classList.add('active');
+    if (selectedBtn) selectedBtn.classList.add('active');
+    
+    // Charger les données si nécessaire
+    if (tabName === 'playlist') {
+        loadPlaylist();
+    }
 }
 
-// Initialisation au chargement
-setTimeout(() => {
-    loadNowPlaying();
-    const userName = tg.initDataUnsafe?.user?.first_name;
-    if (userName) setTimeout(() => showToast(`👋 Salut ${userName} !`), 1000);
-}, 500);
-
-// Auto-refresh toutes les 30 secondes
-setInterval(() => {
-    if (!results.classList.contains('active')) loadNowPlaying();
-}, 30000);
+// ============================================
+// INITIALISATION
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    debugLog('DOM loaded');
+    
+    // Input de recherche
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            const query = searchInput?.value?.trim();
+            if (query) searchTracks(query);
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query) searchTracks(query);
+            }
+        });
+        
+        // Focus automatique
+        searchInput.focus();
+    }
+    
+    // Charger Now Playing
+    updateNowPlaying();
+    setInterval(updateNowPlaying, 5000);
+    
+    debugLog('App initialisée');
+});
