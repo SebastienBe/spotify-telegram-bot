@@ -2,200 +2,67 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#1DB954">
-    <meta name="description" content="Contrôlez votre Spotify depuis Telegram">
-    
-    <!-- PWA -->
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpotiSeb Bot</title>
-    
-    <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- CONTAINER PRINCIPAL -->
     <div class="container">
         
         <!-- NOW PLAYING -->
-        <div class="now-playing-container">
+        <div class="now-playing">
             <h2>En écoute</h2>
-            <div id="nowPlaying" class="now-playing">
-                <p>Chargement...</p>
-            </div>
+            <div id="nowPlaying">Chargement...</div>
         </div>
 
         <!-- TABS -->
         <div class="tabs">
-            <button class="tab active" data-tab="search">Recherche</button>
-            <button class="tab" data-tab="playlist">Playlist</button>
+            <button class="tab active" onclick="switchTab('search')">Recherche</button>
+            <button class="tab" onclick="switchTab('playlist')">Playlist</button>
         </div>
 
-        <!-- TAB CONTENT: SEARCH -->
+        <!-- SEARCH TAB -->
         <div id="search" class="tab-content active">
-            <div class="search-container">
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    placeholder="Rechercher un titre..."
-                    autocomplete="off"
-                >
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Rechercher...">
                 <button id="searchBtn">🔍</button>
             </div>
-            
-            <div id="trackList" class="track-list">
-                <!-- Les résultats apparaîtront ici -->
-            </div>
+            <div id="results"></div>
         </div>
 
-        <!-- TAB CONTENT: PLAYLIST -->
+        <!-- PLAYLIST TAB -->
         <div id="playlist" class="tab-content">
-            <div id="playlistContainer" class="playlist-container">
-                <p>Chargement de la playlist...</p>
-            </div>
+            <div id="playlistContent">Chargement...</div>
         </div>
 
     </div>
 
-    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="toast"></div>
 
-    <!-- PWA INSTALL BUTTON -->
-    <button id="installButton" class="install-btn" hidden>
-        📲 Ajouter à l'écran d'accueil
-    </button>
-
-    <!-- iOS INSTALL HINT -->
-    <div id="iosInstallHint" class="install-hint" hidden>
-        ➕ Pour ajouter <strong>SpotiSeb</strong> à l'écran d'accueil :
-        <br>1. Appuie sur le bouton <strong>Partager</strong> de Safari
-        <br>2. Choisis <strong>"Sur l'écran d'accueil"</strong>
-    </div>
-
-    <!-- Script principal -->
     <script src="script.js"></script>
-    
-    <!-- Service Worker & PWA -->
     <script>
-        // ============================================
-        // SERVICE WORKER
-        // ============================================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('✅ Service Worker:', reg.scope))
-                    .catch(err => console.error('❌ SW Error:', err));
-            });
+        function switchTab(tabName) {
+            // Remove active
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // Add active
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            if (tabName === 'playlist') loadPlaylist();
         }
 
-        // ============================================
-        // PWA INSTALL
-        // ============================================
-        let deferredPrompt;
-        const installButton = document.getElementById('installButton');
-        const iosHint = document.getElementById('iosInstallHint');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installButton.hidden = false;
+        document.getElementById('searchBtn')?.addEventListener('click', () => {
+            const query = document.getElementById('searchInput').value;
+            if (query) searchTracks(query);
         });
 
-        installButton?.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            
-            if (outcome === 'accepted') {
-                console.log('✅ PWA installée');
-            }
-            
-            deferredPrompt = null;
-            installButton.hidden = true;
-        });
-
-        // ============================================
-        // iOS HINT
-        // ============================================
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-        
-        if (isIOS && !isInStandaloneMode && iosHint) {
-            iosHint.hidden = false;
-            setTimeout(() => {
-                iosHint.style.opacity = '0';
-                setTimeout(() => iosHint.hidden = true, 300);
-            }, 8000);
-        }
-
-        // ============================================
-        // TAB SWITCHING
-        // ============================================
-        document.querySelectorAll('.tab').forEach(button => {
-            button.addEventListener('click', () => {
-                // Haptic feedback
-                if (window.Telegram?.WebApp?.HapticFeedback) {
-                    window.Telegram.WebApp.HapticFeedback.selectionChanged();
-                }
-
-                // Remove active states
-                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                
-                // Add active states
-                button.classList.add('active');
-                const tabId = button.getAttribute('data-tab');
-                document.getElementById(tabId).classList.add('active');
-
-                // Reload playlist if switching to it
-                if (tabId === 'playlist') {
-                    loadPlaylist();
-                }
-            });
-        });
-
-        // ============================================
-        // SEARCH TRIGGER
-        // ============================================
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
-
-        searchBtn?.addEventListener('click', () => {
-            const query = searchInput.value.trim();
-            if (query) {
-                searchTracks(query); // Fonction définie dans script.js
-            }
-        });
-
-        searchInput?.addEventListener('keypress', (e) => {
+        document.getElementById('searchInput')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                const query = searchInput.value.trim();
-                if (query) {
-                    searchTracks(query);
-                }
-            }
-        });
-
-        // ============================================
-        // INIT
-        // ============================================
-        window.addEventListener('DOMContentLoaded', () => {
-            // Load now playing on start
-            if (typeof loadNowPlaying === 'function') {
-                loadNowPlaying();
-            }
-
-            // Auto-focus search input
-            if (searchInput) {
-                searchInput.focus();
+                const query = e.target.value;
+                if (query) searchTracks(query);
             }
         });
     </script>
