@@ -21,107 +21,48 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- HEADER -->
-    <header class="header">
-        <div class="header-content">
-            <h1 class="app-title">
-                <span class="logo">🎵</span>
-                SpotiSeb
-            </h1>
-            <div class="user-info" id="userInfo">
-                <span class="user-name"></span>
+    <!-- CONTAINER PRINCIPAL -->
+    <div class="container">
+        
+        <!-- NOW PLAYING -->
+        <div class="now-playing-container">
+            <h2>En écoute</h2>
+            <div id="nowPlaying" class="now-playing">
+                <p>Chargement...</p>
             </div>
         </div>
-    </header>
 
-    <!-- MAIN CONTAINER -->
-    <main class="container">
-        <!-- NOW PLAYING SECTION -->
-        <section class="now-playing-section">
-            <h2 class="section-title">
-                <span class="icon">▶️</span>
-                En cours de lecture
-            </h2>
-            <div id="nowPlaying" class="now-playing">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Chargement...</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- TABS NAVIGATION -->
+        <!-- TABS -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('search')">
-                <span class="tab-icon">🔍</span>
-                <span class="tab-label">Recherche</span>
-            </button>
-            <button class="tab-btn" onclick="switchTab('playlist')">
-                <span class="tab-icon">📋</span>
-                <span class="tab-label">Playlist</span>
-            </button>
+            <button class="tab active" data-tab="search">Recherche</button>
+            <button class="tab" data-tab="playlist">Playlist</button>
         </div>
 
         <!-- TAB CONTENT: SEARCH -->
-        <div id="search-tab" class="tab-content active">
-            <section class="search-section">
-                <h2 class="section-title">
-                    <span class="icon">🔍</span>
-                    Rechercher un titre
-                </h2>
-                
-                <div class="search-container">
-                    <input 
-                        type="text" 
-                        id="searchInput" 
-                        class="search-input" 
-                        placeholder="Artiste, titre, album..."
-                        autocomplete="off"
-                    >
-                    <button id="searchBtn" class="search-btn">
-                        <span class="search-icon">🔍</span>
-                    </button>
-                </div>
-            </section>
-
-            <section class="results-section">
-                <div id="trackList" class="track-list">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🎵</div>
-                        <p>Recherchez un titre pour commencer</p>
-                        <p class="empty-state-hint">Essayez "Daft Punk" ou "The Weeknd"</p>
-                    </div>
-                </div>
-            </section>
+        <div id="search" class="tab-content active">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Rechercher un titre..."
+                    autocomplete="off"
+                >
+                <button id="searchBtn">🔍</button>
+            </div>
+            
+            <div id="trackList" class="track-list">
+                <!-- Les résultats apparaîtront ici -->
+            </div>
         </div>
 
         <!-- TAB CONTENT: PLAYLIST -->
-        <div id="playlist-tab" class="tab-content">
-            <section class="playlist-section">
-                <h2 class="section-title">
-                    <span class="icon">📋</span>
-                    Ma Playlist
-                </h2>
-                <div id="playlistContainer" class="playlist-container">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Chargement de la playlist...</p>
-                    </div>
-                </div>
-            </section>
+        <div id="playlist" class="tab-content">
+            <div id="playlistContainer" class="playlist-container">
+                <p>Chargement de la playlist...</p>
+            </div>
         </div>
-    </main>
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-content">
-            <p class="footer-text">
-                Propulsé par 
-                <a href="https://spotify.com" target="_blank" rel="noopener" class="footer-link">Spotify</a>
-            </p>
-            <p class="footer-version">v1.0.0</p>
-        </div>
-    </footer>
+    </div>
 
     <!-- TOAST NOTIFICATION -->
     <div id="toast" class="toast"></div>
@@ -141,17 +82,22 @@
     <!-- Script principal -->
     <script src="script.js"></script>
     
-    <!-- Service Worker (PWA) -->
+    <!-- Service Worker & PWA -->
     <script>
+        // ============================================
+        // SERVICE WORKER
+        // ============================================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('✅ Service Worker enregistré:', reg.scope))
-                    .catch(err => console.error('❌ Erreur Service Worker:', err));
+                    .then(reg => console.log('✅ Service Worker:', reg.scope))
+                    .catch(err => console.error('❌ SW Error:', err));
             });
         }
 
-        // PWA Install Button
+        // ============================================
+        // PWA INSTALL
+        // ============================================
         let deferredPrompt;
         const installButton = document.getElementById('installButton');
         const iosHint = document.getElementById('iosInstallHint');
@@ -176,7 +122,9 @@
             installButton.hidden = true;
         });
 
-        // Détection iOS pour afficher l'hint
+        // ============================================
+        // iOS HINT
+        // ============================================
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
         
@@ -188,18 +136,68 @@
             }, 8000);
         }
 
-        // User Info
-        try {
-            const tg = window.Telegram?.WebApp;
-            if (tg?.initDataUnsafe?.user) {
-                const userName = document.querySelector('.user-name');
-                if (userName) {
-                    userName.textContent = tg.initDataUnsafe.user.first_name || 'Utilisateur';
+        // ============================================
+        // TAB SWITCHING
+        // ============================================
+        document.querySelectorAll('.tab').forEach(button => {
+            button.addEventListener('click', () => {
+                // Haptic feedback
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.selectionChanged();
+                }
+
+                // Remove active states
+                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active states
+                button.classList.add('active');
+                const tabId = button.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+
+                // Reload playlist if switching to it
+                if (tabId === 'playlist') {
+                    loadPlaylist();
+                }
+            });
+        });
+
+        // ============================================
+        // SEARCH TRIGGER
+        // ============================================
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+
+        searchBtn?.addEventListener('click', () => {
+            const query = searchInput.value.trim();
+            if (query) {
+                searchTracks(query); // Fonction définie dans script.js
+            }
+        });
+
+        searchInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query) {
+                    searchTracks(query);
                 }
             }
-        } catch (error) {
-            console.error('Erreur chargement user info:', error);
-        }
+        });
+
+        // ============================================
+        // INIT
+        // ============================================
+        window.addEventListener('DOMContentLoaded', () => {
+            // Load now playing on start
+            if (typeof loadNowPlaying === 'function') {
+                loadNowPlaying();
+            }
+
+            // Auto-focus search input
+            if (searchInput) {
+                searchInput.focus();
+            }
+        });
     </script>
 </body>
 </html>
