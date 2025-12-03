@@ -343,6 +343,28 @@
         <input type="text" class="search-box" id="searchInput" placeholder="Rechercher un titre, artiste...">
     </div>
 
+    <div class="quick-actions">
+        <button class="quick-btn" onclick="togglePlaylist()">
+            📋 Voir Otera
+        </button>
+        <button class="quick-btn btn-follow" onclick="followPlaylist()">
+            ➕ Suivre Playlist
+        </button>
+    </div>
+
+    <div class="playlist-section" id="playlistSection">
+        <div class="playlist-header">
+            <div class="playlist-info">
+                <div class="playlist-cover">🎵</div>
+                <div class="playlist-details">
+                    <h3>Playlist Otera</h3>
+                    <p id="playlistCount">Chargement...</p>
+                </div>
+            </div>
+        </div>
+        <div id="playlistTracks"></div>
+    </div>
+
     <div class="results" id="results">
         <div class="section-title">📀 Résultats</div>
         <div id="trackList"></div>
@@ -356,8 +378,10 @@
             N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
             N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
             N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
+            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
+            N8N_WEBHOOK_FOLLOW_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-follow-playlist',
             N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
-            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS?si=f357c37682564085' // ID de votre playlist Otera
+            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS' // ID de votre playlist Otera
         };
 
         // Debug mode - mettre à true pour voir les détails
@@ -392,9 +416,12 @@
 
         // Variables globales
         let searchTimeout;
+        let playlistVisible = false;
         const searchInput = document.getElementById('searchInput');
         const results = document.getElementById('results');
         const trackList = document.getElementById('trackList');
+        const playlistSection = document.getElementById('playlistSection');
+        const playlistTracks = document.getElementById('playlistTracks');
 
         // Recherche avec debounce
         searchInput.addEventListener('input', (e) => {
@@ -405,6 +432,10 @@
                 results.classList.remove('active');
                 return;
             }
+
+            // Cacher la playlist quand on recherche
+            playlistSection.classList.remove('active');
+            playlistVisible = false;
 
             trackList.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Recherche en cours...</div>';
             results.classList.add('active');
@@ -558,6 +589,119 @@
             } catch (error) {
                 console.error('Erreur ajout playlist:', error);
                 debugLog('Erreur add playlist', error.message);
+                showToast(`❌ Erreur: ${error.message}`);
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+        }
+
+        // Toggle affichage playlist
+        async function togglePlaylist() {
+            tg.HapticFeedback.impactOccurred('light');
+            
+            playlistVisible = !playlistVisible;
+            
+            if (playlistVisible) {
+                results.classList.remove('active');
+                playlistSection.classList.add('active');
+                searchInput.value = '';
+                await loadPlaylist();
+            } else {
+                playlistSection.classList.remove('active');
+            }
+        }
+
+        // Charger la playlist
+        async function loadPlaylist() {
+            try {
+                playlistTracks.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Chargement...</div>';
+                
+                const url = `${CONFIG.N8N_WEBHOOK_GET_PLAYLIST}?playlist_id=${CONFIG.PLAYLIST_ID}`;
+                
+                debugLog('Playlist URL', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                debugLog('Response playlist', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                debugLog('Playlist data', data);
+                
+                displayPlaylistTracks(data.tracks || [], data.total || 0);
+            } catch (error) {
+                console.error('Erreur playlist:', error);
+                debugLog('Erreur playlist', error.message);
+                playlistTracks.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Erreur: ${error.message}</p></div>`;
+                showToast(`❌ ${error.message}`);
+            }
+        }
+
+        // Afficher les tracks de la playlist
+        function displayPlaylistTracks(tracks, total) {
+            document.getElementById('playlistCount').textContent = `${total} musique${total > 1 ? 's' : ''}`;
+            
+            if (!tracks || tracks.length === 0) {
+                playlistTracks.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>La playlist est vide</p></div>';
+                return;
+            }
+
+            playlistTracks.innerHTML = tracks.map((track, index) => `
+                <div class="playlist-track-item">
+                    <div class="playlist-track-number">${index + 1}</div>
+                    <div class="playlist-track-cover">
+                        ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
+                    </div>
+                    <div class="track-info">
+                        <div class="track-name">${escapeHtml(track.name)}</div>
+                        <div class="track-artist">${escapeHtml(track.artist)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Suivre la playlist sur Spotify
+        async function followPlaylist() {
+            try {
+                tg.HapticFeedback.impactOccurred('medium');
+                
+                const userId = tg.initDataUnsafe?.user?.id || 'demo';
+                
+                debugLog('Follow playlist', { playlist_id: CONFIG.PLAYLIST_ID });
+                
+                const response = await fetch(CONFIG.N8N_WEBHOOK_FOLLOW_PLAYLIST, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        playlist_id: CONFIG.PLAYLIST_ID
+                    })
+                });
+
+                debugLog('Response follow', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                debugLog('Result follow', result);
+
+                showToast(`✅ Playlist Otera suivie !`);
+                tg.HapticFeedback.notificationOccurred('success');
+            } catch (error) {
+                console.error('Erreur follow:', error);
+                debugLog('Erreur follow', error.message);
                 showToast(`❌ Erreur: ${error.message}`);
                 tg.HapticFeedback.notificationOccurred('error');
             }
