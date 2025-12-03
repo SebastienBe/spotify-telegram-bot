@@ -628,30 +628,19 @@
                 });
 
                 if (!response.ok) {
-                    let errorText = '';
-                    try {
-                        errorText = await response.text();
-                    } catch (e) {
-                        errorText = 'Impossible de lire la réponse';
-                    }
+                    const errorText = await response.text();
                     debugLog('Error response text', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
                 }
 
-                // Lire la réponse comme texte d'abord
-                const responseText = await response.text();
-                debugLog('Response text', responseText);
-
-                // Essayer de parser en JSON seulement si non vide
-                if (responseText && responseText.trim().length > 0) {
-                    try {
-                        const result = JSON.parse(responseText);
-                        debugLog('Result add (JSON)', result);
-                    } catch (jsonError) {
-                        debugLog('Response is not JSON', responseText);
-                    }
+                // Vérifier si la réponse contient du JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    debugLog('Result add', result);
                 } else {
-                    debugLog('Empty response from webhook', 'Response is empty but status is OK');
+                    const textResult = await response.text();
+                    debugLog('Text response', textResult);
                 }
 
                 showToast(`⭐️ "${name}" ajouté à la queue !`);
@@ -700,30 +689,19 @@
                 });
 
                 if (!response.ok) {
-                    let errorText = '';
-                    try {
-                        errorText = await response.text();
-                    } catch (e) {
-                        errorText = 'Impossible de lire la réponse';
-                    }
+                    const errorText = await response.text();
                     debugLog('Error response text', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
                 }
 
-                // Lire la réponse comme texte d'abord
-                const responseText = await response.text();
-                debugLog('Response text', responseText);
-
-                // Essayer de parser en JSON seulement si non vide
-                if (responseText && responseText.trim().length > 0) {
-                    try {
-                        const result = JSON.parse(responseText);
-                        debugLog('Result add playlist (JSON)', result);
-                    } catch (jsonError) {
-                        debugLog('Response is not JSON', responseText);
-                    }
+                // Vérifier si la réponse contient du JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const result = await response.json();
+                    debugLog('Result add playlist', result);
                 } else {
-                    debugLog('Empty response from webhook', 'Response is empty but status is OK');
+                    const textResult = await response.text();
+                    debugLog('Text response', textResult);
                 }
 
                 showToast(`📋 "${name}" ajouté à Otera !`);
