@@ -170,15 +170,41 @@
             border-radius: 12px;
             background: var(--tg-theme-secondary-bg-color, #f4f4f4);
             margin-bottom: 12px;
-            cursor: pointer;
             transition: all 0.3s;
             display: flex;
             gap: 12px;
             align-items: center;
         }
 
-        .track-item:active {
-            transform: scale(0.98);
+        .track-actions {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+        .track-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .track-btn-queue {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        .track-btn-playlist {
+            background: #1DB954;
+            color: white;
+        }
+
+        .track-btn:active {
+            transform: scale(0.95);
             opacity: 0.8;
         }
 
@@ -329,7 +355,9 @@
         const CONFIG = {
             N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
             N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
-            N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing'
+            N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-add-playlist',
+            N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
+            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS?si=f357c37682564085' // ID de votre playlist Otera
         };
 
         // Debug mode - mettre à true pour voir les détails
@@ -426,7 +454,7 @@
             }
 
             trackList.innerHTML = tracks.map(track => `
-                <div class="track-item" onclick='addTrack(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)})'>
+                <div class="track-item">
                     <div class="track-cover">
                         ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
                     </div>
@@ -434,18 +462,28 @@
                         <div class="track-name">${escapeHtml(track.name)}</div>
                         <div class="track-artist">${escapeHtml(track.artist)}</div>
                     </div>
+                    <div class="track-actions">
+                        <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
+                            ⏭️ Queue
+                        </button>
+                        <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
+                            📋 Otera
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
 
-        // Ajouter une musique
-        async function addTrack(uri, name, artist) {
+        // Ajouter à la queue
+        async function addToQueue(uri, name, artist, event) {
+            if (event) event.stopPropagation();
+            
             try {
                 tg.HapticFeedback.impactOccurred('medium');
                 
                 const userId = tg.initDataUnsafe?.user?.id || 'demo';
                 
-                debugLog('Ajout track', { uri, name, artist });
+                debugLog('Ajout queue', { uri, name, artist });
                 
                 const response = await fetch(CONFIG.N8N_WEBHOOK_ADD, {
                     method: 'POST',
@@ -470,11 +508,56 @@
                 const result = await response.json();
                 debugLog('Result add', result);
 
-                showToast(`✅ "${name}" ajouté !`);
+                showToast(`⏭️ "${name}" ajouté à la queue !`);
                 tg.HapticFeedback.notificationOccurred('success');
             } catch (error) {
-                console.error('Erreur ajout:', error);
-                debugLog('Erreur add', error.message);
+                console.error('Erreur ajout queue:', error);
+                debugLog('Erreur add queue', error.message);
+                showToast(`❌ Erreur: ${error.message}`);
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+        }
+
+        // Ajouter à la playlist Otera
+        async function addToPlaylist(uri, name, artist, event) {
+            if (event) event.stopPropagation();
+            
+            try {
+                tg.HapticFeedback.impactOccurred('medium');
+                
+                const userId = tg.initDataUnsafe?.user?.id || 'demo';
+                
+                debugLog('Ajout playlist', { uri, name, artist });
+                
+                const response = await fetch(CONFIG.N8N_WEBHOOK_ADD_PLAYLIST, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        track_uri: uri,
+                        track_name: name,
+                        track_artist: artist,
+                        playlist_id: CONFIG.PLAYLIST_ID
+                    })
+                });
+
+                debugLog('Response add playlist', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                debugLog('Result add playlist', result);
+
+                showToast(`📋 "${name}" ajouté à Otera !`);
+                tg.HapticFeedback.notificationOccurred('success');
+            } catch (error) {
+                console.error('Erreur ajout playlist:', error);
+                debugLog('Erreur add playlist', error.message);
                 showToast(`❌ Erreur: ${error.message}`);
                 tg.HapticFeedback.notificationOccurred('error');
             }
