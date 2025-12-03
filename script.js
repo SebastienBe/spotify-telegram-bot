@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ============================================
 const CONFIG = {
-    N8N_WEBHOOK_BASE: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-bot',
+    N8N_WEBHOOK_BASE: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-bot',
     PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS',
     DEMO_MODE: false
 };
