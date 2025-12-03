@@ -706,13 +706,6 @@
                     contentLength: response.headers.get('content-length')
                 });
 
-                // Log toutes les headers pour debug
-                const headers = {};
-                response.headers.forEach((value, key) => {
-                    headers[key] = value;
-                });
-                debugLog('📋 Headers complets', headers);
-
                 if (!response.ok) {
                     let errorText = '';
                     try {
@@ -724,52 +717,40 @@
                     throw new Error(`Serveur: ${response.status} - ${errorText || response.statusText}`);
                 }
 
-                // Lire la réponse comme texte d'abord
-                let responseText = '';
-                try {
-                    responseText = await response.text();
-                    debugLog('📄 Texte brut de la réponse', {
-                        length: responseText.length,
-                        isEmpty: responseText.trim().length === 0,
-                        preview: responseText.substring(0, 200)
-                    });
-                } catch (e) {
-                    debugLog('⚠️ Impossible de lire le texte', e.message);
-                }
+                // IMPORTANT: Lire comme texte pour éviter l'erreur JSON
+                const responseText = await response.text();
+                
+                debugLog('📄 Réponse brute', {
+                    length: responseText.length,
+                    isEmpty: responseText.trim().length === 0,
+                    content: responseText || '(vide)'
+                });
 
-                // Essayer de parser en JSON seulement si non vide
+                // Si la réponse n'est pas vide, essayer de la parser
                 if (responseText && responseText.trim().length > 0) {
                     try {
                         const result = JSON.parse(responseText);
-                        debugLog('✅ JSON parsé avec succès', result);
+                        debugLog('✅ JSON parsé', result);
                         
-                        // Vérifier si le webhook retourne une erreur
                         if (result.error) {
                             throw new Error(result.error);
                         }
                     } catch (jsonError) {
-                        if (jsonError.message.includes('Unexpected')) {
-                            debugLog('⚠️ Réponse non-JSON', {
-                                text: responseText,
-                                error: jsonError.message
-                            });
-                        } else {
-                            throw jsonError;
-                        }
+                        // Si ce n'est pas du JSON valide, ce n'est pas grave
+                        debugLog('⚠️ Réponse non-JSON (ignorée)', responseText.substring(0, 100));
                     }
                 } else {
-                    debugLog('⚠️ Réponse vide du webhook', 'Le webhook a répondu 200 OK mais sans contenu');
+                    debugLog('✅ Réponse vide mais statut OK', 'Le webhook a réussi');
                 }
 
                 showToast(`📋 "${name}" ajouté à Otera !`);
                 safeHaptic('notificationOccurred', 'success');
                 
             } catch (error) {
-                console.error('❌ ERREUR COMPLÈTE:', error);
-                debugLog('❌ Erreur détaillée', {
+                console.error('❌ ERREUR:', error);
+                debugLog('❌ Erreur complète', {
                     name: error.name,
-                    message: error.message,
-                    stack: error.stack?.substring(0, 300)
+                    message: error.message
                 });
                 showToast(`❌ ${error.message}`);
                 safeHaptic('notificationOccurred', 'error');
