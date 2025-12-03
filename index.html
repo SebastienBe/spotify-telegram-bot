@@ -661,6 +661,11 @@
                         <div class="track-name">${index + 1}. ${escapeHtml(track.name)}</div>
                         <div class="track-artist">${escapeHtml(track.artist)}</div>
                     </div>
+                    <div class="track-actions">
+                        <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>
+                            ⏭️ Queue
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
