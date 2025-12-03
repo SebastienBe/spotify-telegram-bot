@@ -375,13 +375,12 @@
     <script>
         // Configuration - REMPLACEZ PAR VOS WEBHOOKS N8N
         const CONFIG = {
-            N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-search',
-            N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add',
-            N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-add-playlist',
-            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-get-playlist',
-            N8N_WEBHOOK_FOLLOW_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-follow-playlist',
-            N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook/spotify-now-playing',
-            PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS' // ID de votre playlist Otera
+            N8N_WEBHOOK_SEARCH: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-search',
+            N8N_WEBHOOK_ADD: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-add',
+            N8N_WEBHOOK_ADD_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-add-playlist',
+            N8N_WEBHOOK_GET_PLAYLIST: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-get-playlist',
+            N8N_WEBHOOK_NOW_PLAYING: 'https://n8n-seb.sandbox-jerem.com/webhook-test/spotify-now-playing',
+            PLAYLIST_ID: 'YOUR_PLAYLIST_ID' // ID de votre playlist Otera
         };
 
         // Debug mode - mettre à true pour voir les détails
@@ -667,41 +666,22 @@
             `).join('');
         }
 
-        // Suivre la playlist sur Spotify
-        async function followPlaylist() {
+        // Suivre la playlist sur Spotify (ouvre Spotify)
+        function followPlaylist() {
             try {
                 tg.HapticFeedback.impactOccurred('medium');
                 
-                const userId = tg.initDataUnsafe?.user?.id || 'demo';
+                debugLog('Opening Spotify playlist', { playlist_id: CONFIG.PLAYLIST_ID });
                 
-                debugLog('Follow playlist', { playlist_id: CONFIG.PLAYLIST_ID });
+                // Ouvrir Spotify avec la playlist
+                const spotifyUrl = `https://open.spotify.com/playlist/${CONFIG.PLAYLIST_ID}`;
+                window.open(spotifyUrl, '_blank');
                 
-                const response = await fetch(CONFIG.N8N_WEBHOOK_FOLLOW_PLAYLIST, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        playlist_id: CONFIG.PLAYLIST_ID
-                    })
-                });
-
-                debugLog('Response follow', response.status);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const result = await response.json();
-                debugLog('Result follow', result);
-
-                showToast(`✅ Playlist Otera suivie !`);
+                showToast(`📱 Ouverture de Spotify...`);
                 tg.HapticFeedback.notificationOccurred('success');
             } catch (error) {
-                console.error('Erreur follow:', error);
-                debugLog('Erreur follow', error.message);
+                console.error('Erreur ouverture Spotify:', error);
+                debugLog('Erreur open spotify', error.message);
                 showToast(`❌ Erreur: ${error.message}`);
                 tg.HapticFeedback.notificationOccurred('error');
             }
