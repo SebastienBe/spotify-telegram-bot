@@ -222,14 +222,9 @@ async function togglePlaylist() {
 // Charger la playlist
 async function loadPlaylist() {
     try {
+        console.log('🔄 Chargement de la playlist...');
+        
         playlistTracks.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Chargement...</div>';
-        
-        const payload = {
-            action: 'getPlaylist',
-            playlist_id: CONFIG.PLAYLIST_ID
-        };
-        
-        debugLog('🔵 GetPlaylist payload', payload);
         
         const response = await fetch(CONFIG.N8N_WEBHOOK_BASE, {
             method: 'POST',
@@ -237,35 +232,110 @@ async function loadPlaylist() {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json' 
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                action: 'getPlaylist',
+                playlist_id: CONFIG.PLAYLIST_ID
+            })
         });
-        
-        debugLog('🟢 GetPlaylist response status', response.status);
-        
+
         if (!response.ok) {
-            const errorText = await response.text();
-            debugLog('❌ GetPlaylist error response', errorText);
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
-        debugLog('✅ GetPlaylist data', data);
-        
-        if (data.status === 'ok' && data.tracks) {
-            displayPlaylistTracks(data.tracks, data.total || 0);
-        } else {
-            throw new Error('Invalid response format');
+        console.log('📦 Data reçue:', data);
+
+        // ✅ VALIDATION CORRIGÉE
+        if (!data || typeof data !== 'object') {
+            throw new Error('Réponse invalide du serveur');
         }
+
+        // Vérifier si data.status === 'ok' OU si data.tracks existe directement
+        const tracks = data.status === 'ok' ? data.tracks : data.tracks;
+        
+        if (!tracks || !Array.isArray(tracks)) {
+            console.error('❌ Tracks manquant ou invalide:', data);
+            throw new Error('Format de playlist invalide');
+        }
+
+        if (tracks.length === 0) {
+            playlistTracks.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>La playlist est vide</p>
+                </div>
+            `;
+            return;
+        }
+
+        // ✅ AFFICHAGE DE LA PLAYLIST
+        console.log('✅ Playlist valide:', tracks.length, 'titres');
+        
+        // Mise à jour des infos
+        const nameElement = document.getElementById('playlist-name');
+        const countElement = document.getElementById('track-count');
+        
+        if (nameElement) {
+            nameElement.textContent = data.playlistName || 'Playlist Otera';
+        }
+        
+        if (countElement) {
+            const total = data.totalTracks || data.total || tracks.length || 0;
+            countElement.textContent = `${total} titre${total > 1 ? 's' : ''}`;
+        }
+        
+        // Image de la playlist
+        if (data.playlistImage) {
+            console.log('🖼️ Image URL:', data.playlistImage);
+            const playlistImageEl = document.getElementById('playlist-cover');
+            if (playlistImageEl) {
+                playlistImageEl.src = data.playlistImage;
+                playlistImageEl.style.display = 'block';
+                console.log('✅ Image définie');
+                
+                // Gérer les erreurs de chargement d'image
+                playlistImageEl.onerror = function() {
+                    console.warn('⚠️ Erreur de chargement de l\'image:', data.playlistImage);
+                    this.src = '';
+                    this.alt = '🎵';
+                    this.classList.add('error');
+                };
+                
+                // Succès de chargement
+                playlistImageEl.onload = function() {
+                    console.log('✅ Image chargée avec succès');
+                    this.classList.remove('error');
+                };
+            }
+        } else {
+            console.warn('⚠️ Pas d\'image dans la réponse');
+            const playlistImageEl = document.getElementById('playlist-cover');
+            if (playlistImageEl) {
+                playlistImageEl.src = '';
+                playlistImageEl.alt = '🎵';
+            }
+        }
+
+        // Affichage des tracks
+        const total = data.totalTracks || data.total || tracks.length || 0;
+        displayPlaylistTracks(tracks, total);
+        
     } catch (error) {
-        console.error('Erreur:', error);
-        playlistTracks.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Erreur: ${error.message}</p></div>`;
+        console.error('❌ Erreur lors du chargement:', error);
+        playlistTracks.innerHTML = `
+            <div class="empty-state error">
+                <div class="empty-state-icon">❌</div>
+                <p>Erreur: ${error.message}</p>
+                <button onclick="loadPlaylist()" class="retry-btn" style="margin-top: 12px; padding: 8px 16px; background: var(--spotify-green); color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 700;">Réessayer</button>
+            </div>
+        `;
         showToast(`❌ ${error.message}`);
     }
 }
 
 // Afficher les tracks de la playlist
 function displayPlaylistTracks(tracks, total) {
-    const countElement = document.getElementById('playlistCount');
+    const countElement = document.getElementById('track-count');
     if (countElement) {
         countElement.textContent = `${total} titre${total > 1 ? 's' : ''}`;
     }
@@ -470,7 +540,6 @@ setTimeout(() => {
 setInterval(() => {
     if (!results.classList.contains('active')) loadNowPlaying();
 }, 30000);
-
 // ============================================
 // PLAYBACK CONTROLS (VERSION FINALE)
 // ============================================
@@ -763,3 +832,5 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ... ton autre code d'initialisation existant
 });
+
+
