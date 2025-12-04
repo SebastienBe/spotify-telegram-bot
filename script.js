@@ -477,8 +477,13 @@ setInterval(() => {
 const PLAYBACK_WEBHOOK = 'https://n8n-seb.sandbox-jerem.com/webhook/playback-control';
 
 async function togglePlayPause() {
-    const btn = document.getElementById('playBtn');
-    const isPlaying = btn.textContent.includes('Pause');
+    const playIcon = document.getElementById('playIcon');
+    const pauseIcon = document.getElementById('pauseIcon');
+    const btn = document.getElementById('playPauseBtn');
+    
+    if (!playIcon || !pauseIcon || !btn) return;
+    
+    const isPlaying = playIcon.style.display === 'none';
     
     try {
         const response = await fetch(PLAYBACK_WEBHOOK, {
@@ -490,7 +495,17 @@ async function togglePlayPause() {
         });
 
         if (response.ok) {
-            btn.textContent = isPlaying ? '▶️ Play' : '⏸️ Pause';
+            if (isPlaying) {
+                // Actuellement en lecture → Pause
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+                btn.classList.remove('playing');
+            } else {
+                // Actuellement en pause → Play
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+                btn.classList.add('playing');
+            }
             showToast(isPlaying ? '⏸️ Musique en pause' : '▶️ Lecture en cours', 'success');
         } else {
             showToast('❌ Erreur de lecture', 'error');
@@ -501,7 +516,7 @@ async function togglePlayPause() {
     }
 }
 
-async function skipTrack() {
+async function nextTrack() {
     try {
         const response = await fetch(PLAYBACK_WEBHOOK, {
             method: 'POST',
@@ -511,7 +526,6 @@ async function skipTrack() {
 
         if (response.ok) {
             showToast('⏭️ Piste suivante', 'success');
-            // ❌ SUPPRIMÉ : setTimeout(getCurrentTrack, 500);
         } else {
             showToast('❌ Erreur de saut', 'error');
         }
@@ -552,16 +566,51 @@ let currentRepeat = 'off'; // 'off', 'track', 'context'
 // VOLUME CONTROL
 // ============================================
 
-function updateVolumeDisplay(value) {
-    const display = document.getElementById('volumeDisplay');
-    if (display) {
-        display.textContent = `${value}%`;
+let isMuted = false;
+let previousVolume = 50;
+
+function updateVolume(value) {
+    const slider = document.getElementById('volumeSlider');
+    const valueDisplay = document.getElementById('volumeValue');
+    
+    if (slider) {
+        const percentage = value + '%';
+        slider.style.setProperty('--volume-percentage', percentage);
+        if (!isMuted) {
+            previousVolume = parseInt(value);
+        }
     }
     
-    // Mise à jour du gradient du slider
+    if (valueDisplay) {
+        valueDisplay.textContent = value;
+    }
+}
+
+function toggleMute() {
+    const volumeIcon = document.getElementById('volumeIcon');
+    const mutedIcon = document.getElementById('mutedIcon');
     const slider = document.getElementById('volumeSlider');
-    if (slider) {
-        slider.style.background = `linear-gradient(to right, #1DB954 0%, #1DB954 ${value}%, #333 ${value}%, #333 100%)`;
+    const valueDisplay = document.getElementById('volumeValue');
+    
+    if (!volumeIcon || !mutedIcon || !slider) return;
+    
+    isMuted = !isMuted;
+    
+    if (isMuted) {
+        // Muter
+        previousVolume = parseInt(slider.value);
+        slider.value = 0;
+        updateVolume(0);
+        volumeIcon.style.display = 'none';
+        mutedIcon.style.display = 'block';
+        setVolume(0);
+    } else {
+        // Démuter
+        slider.value = previousVolume || 50;
+        updateVolume(previousVolume || 50);
+        volumeIcon.style.display = 'block';
+        mutedIcon.style.display = 'none';
+        setVolume(previousVolume || 50);
     }
 }
 
@@ -609,7 +658,6 @@ async function toggleShuffle() {
         });
 
         if (response.ok) {
-            btn.textContent = currentShuffle ? '🔀 Shuffle: ON' : '🔀 Shuffle: OFF';
             btn.classList.toggle('active', currentShuffle);
             showToast(currentShuffle ? '🔀 Shuffle activé' : '🔀 Shuffle désactivé', 'success');
         } else {
@@ -627,7 +675,7 @@ async function toggleShuffle() {
 // REPEAT MODE CYCLE
 // ============================================
 
-async function cycleRepeat() {
+async function toggleRepeat() {
     const btn = document.getElementById('repeatBtn');
     if (!btn) return;
     
@@ -639,9 +687,9 @@ async function cycleRepeat() {
     };
     
     const labels = {
-        'off': '🔁 Répéter: OFF',
-        'context': '🔁 Répéter: Playlist',
-        'track': '🔂 Répéter: Piste'
+        'off': 'Répéter: OFF',
+        'context': 'Répéter: Playlist',
+        'track': 'Répéter: Piste'
     };
     
     const nextMode = modes[currentRepeat];
@@ -658,7 +706,6 @@ async function cycleRepeat() {
 
         if (response.ok) {
             currentRepeat = nextMode;
-            btn.textContent = labels[nextMode];
             btn.classList.toggle('active', nextMode !== 'off');
             showToast(labels[nextMode], 'success');
         } else {
@@ -680,7 +727,7 @@ function initAdvancedControls() {
     if (volumeSlider) {
         // Mise à jour du display en temps réel
         volumeSlider.addEventListener('input', (e) => {
-            updateVolumeDisplay(e.target.value);
+            updateVolume(e.target.value);
         });
         
         // Envoi à Spotify au relâchement
@@ -689,7 +736,7 @@ function initAdvancedControls() {
         });
         
         // Initialisation
-        updateVolumeDisplay(volumeSlider.value);
+        updateVolume(volumeSlider.value);
     }
     
     // Shuffle Button
@@ -701,7 +748,7 @@ function initAdvancedControls() {
     // Repeat Button
     const repeatBtn = document.getElementById('repeatBtn');
     if (repeatBtn) {
-        repeatBtn.addEventListener('click', cycleRepeat);
+        repeatBtn.addEventListener('click', toggleRepeat);
     }
 }
 
@@ -715,5 +762,3 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ... ton autre code d'initialisation existant
 });
-
-
