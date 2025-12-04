@@ -434,14 +434,22 @@ async function loadNowPlaying() {
 }
 
 // Afficher un toast
-function showToast(message) {
+// Afficher un toast avec support des types (success/error/info)
+function showToast(message, type = '') {
     const toast = document.getElementById('toast');
-    if (toast) {
-        toast.textContent = message;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 3000);
-    }
+    if (!toast) return;
+    
+    toast.textContent = message;
+    
+    // Réinitialise les classes et ajoute le type
+    toast.className = 'show';
+    if (type) toast.classList.add(`toast-${type}`);
+    
+    setTimeout(() => {
+        toast.classList.remove('show', `toast-${type}`);
+    }, 3000);
 }
+
 
 // Échapper HTML
 function escapeHtml(text) {
@@ -462,3 +470,250 @@ setTimeout(() => {
 setInterval(() => {
     if (!results.classList.contains('active')) loadNowPlaying();
 }, 30000);
+// ============================================
+// PLAYBACK CONTROLS (VERSION FINALE)
+// ============================================
+
+const PLAYBACK_WEBHOOK = 'https://n8n-seb.sandbox-jerem.com/webhook/playback-control';
+
+async function togglePlayPause() {
+    const btn = document.getElementById('playBtn');
+    const isPlaying = btn.textContent.includes('Pause');
+    
+    try {
+        const response = await fetch(PLAYBACK_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: isPlaying ? 'pause' : 'play'
+            })
+        });
+
+        if (response.ok) {
+            btn.textContent = isPlaying ? '▶️ Play' : '⏸️ Pause';
+            showToast(isPlaying ? '⏸️ Musique en pause' : '▶️ Lecture en cours', 'success');
+        } else {
+            showToast('❌ Erreur de lecture', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('❌ Erreur de connexion', 'error');
+    }
+}
+
+async function skipTrack() {
+    try {
+        const response = await fetch(PLAYBACK_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'skip' })
+        });
+
+        if (response.ok) {
+            showToast('⏭️ Piste suivante', 'success');
+            // ❌ SUPPRIMÉ : setTimeout(getCurrentTrack, 500);
+        } else {
+            showToast('❌ Erreur de saut', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('❌ Erreur de connexion', 'error');
+    }
+}
+
+async function previousTrack() {
+    try {
+        const response = await fetch(PLAYBACK_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'previous' })
+        });
+
+        if (response.ok) {
+            showToast('⏮️ Piste précédente', 'success');
+            // ❌ SUPPRIMÉ : setTimeout(getCurrentTrack, 500);
+        } else {
+            showToast('❌ Erreur de retour', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('❌ Erreur de connexion', 'error');
+    }
+}
+// ============================================
+// ADVANCED PLAYBACK CONTROLS
+// ============================================
+
+// États globaux
+let currentShuffle = false;
+let currentRepeat = 'off'; // 'off', 'track', 'context'
+
+// ============================================
+// VOLUME CONTROL
+// ============================================
+
+function updateVolumeDisplay(value) {
+    const display = document.getElementById('volumeDisplay');
+    if (display) {
+        display.textContent = `${value}%`;
+    }
+    
+    // Mise à jour du gradient du slider
+    const slider = document.getElementById('volumeSlider');
+    if (slider) {
+        slider.style.background = `linear-gradient(to right, #1DB954 0%, #1DB954 ${value}%, #333 ${value}%, #333 100%)`;
+    }
+}
+
+
+async function setVolume(volume) {
+    try {
+        const response = await fetch(PLAYBACK_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'volume',
+                value: parseInt(volume)
+            })
+        });
+
+        if (response.ok) {
+            showToast(`🔊 Volume: ${volume}%`, 'success');
+        } else {
+            showToast('❌ Erreur de volume', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('❌ Erreur de connexion', 'error');
+    }
+}
+
+// ============================================
+// SHUFFLE TOGGLE
+// ============================================
+
+async function toggleShuffle() {
+    const btn = document.getElementById('shuffleBtn');
+    if (!btn) return;
+    
+    currentShuffle = !currentShuffle;
+    
+    try {
+        const response = await fetch(PLAYBACK_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'shuffle',
+                value: currentShuffle
+            })
+        });
+
+        if (response.ok) {
+            btn.textContent = currentShuffle ? '🔀 Shuffle: ON' : '🔀 Shuffle: OFF';
+            btn.classList.toggle('active', currentShuffle);
+            showToast(currentShuffle ? '🔀 Shuffle activé' : '🔀 Shuffle désactivé', 'success');
+        } else {
+            showToast('❌ Erreur shuffle', 'error');
+            currentShuffle = !currentShuffle; // Rollback
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('❌ Erreur de connexion', 'error');
+        currentShuffle = !currentShuffle; // Rollback
+    }
+}
+
+// ============================================
+// REPEAT MODE CYCLE
+// ============================================
+
+async function cycleRepeat() {
+    const btn = document.getElementById('repeatBtn');
+    if (!btn) return;
+    
+    // Cycle: off → context → track → off
+    const modes = {
+        'off': 'context',
+        'context': 'track',
+        'track': 'off'
+    };
+    
+    const labels = {
+        'off': '🔁 Répéter: OFF',
+        'context': '🔁 Répéter: Playlist',
+        'track': '🔂 Répéter: Piste'
+    };
+    
+    const nextMode = modes[currentRepeat];
+    
+    try {
+        const response = await fetch(PLAYBACK_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'repeat',
+                value: nextMode
+            })
+        });
+
+        if (response.ok) {
+            currentRepeat = nextMode;
+            btn.textContent = labels[nextMode];
+            btn.classList.toggle('active', nextMode !== 'off');
+            showToast(labels[nextMode], 'success');
+        } else {
+            showToast('❌ Erreur repeat', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast('❌ Erreur de connexion', 'error');
+    }
+}
+
+// ============================================
+// INITIALISATION DES EVENT LISTENERS
+// ============================================
+
+function initAdvancedControls() {
+    // Volume Slider
+    const volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+        // Mise à jour du display en temps réel
+        volumeSlider.addEventListener('input', (e) => {
+            updateVolumeDisplay(e.target.value);
+        });
+        
+        // Envoi à Spotify au relâchement
+        volumeSlider.addEventListener('change', (e) => {
+            setVolume(e.target.value);
+        });
+        
+        // Initialisation
+        updateVolumeDisplay(volumeSlider.value);
+    }
+    
+    // Shuffle Button
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    if (shuffleBtn) {
+        shuffleBtn.addEventListener('click', toggleShuffle);
+    }
+    
+    // Repeat Button
+    const repeatBtn = document.getElementById('repeatBtn');
+    if (repeatBtn) {
+        repeatBtn.addEventListener('click', cycleRepeat);
+    }
+}
+
+// ============================================
+// INITIALISATION AU CHARGEMENT
+// ============================================
+
+// Ajoute cette ligne à ton DOMContentLoaded existant ou crée-le s'il n'existe pas
+document.addEventListener('DOMContentLoaded', () => {
+    initAdvancedControls();
+    
+    // ... ton autre code d'initialisation existant
+});
+
+
