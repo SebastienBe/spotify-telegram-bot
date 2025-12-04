@@ -267,17 +267,64 @@ body {
 }
 
 .playlist-cover {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     border-radius: 8px;
-    background: var(--spotify-green);
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease;
+    background: linear-gradient(135deg, #1db954, #1ed760);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
-    box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+    font-size: 40px;
+    color: white;
+    flex-shrink: 0;
 }
 
+.playlist-cover:hover {
+    transform: scale(1.05);
+}
+
+/* Si l'image charge, cacher le texte/emoji */
+.playlist-cover[src]:not([src=""]) {
+    font-size: 0;
+}
+
+/* Gestion d'erreur de chargement - afficher l'emoji depuis l'attribut alt */
+.playlist-cover::before {
+    content: attr(alt);
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Cacher le pseudo-élément quand l'image charge correctement */
+.playlist-cover[src]:not([src=""]):not(.error)::before {
+    content: none;
+}
+
+/* Si l'image a une erreur, afficher le fallback */
+.playlist-cover.error::before {
+    content: attr(alt);
+    font-size: 40px;
+}
+
+/* Cas où src est vide ou absent */
+.playlist-cover[src=""],
+.playlist-cover:not([src]) {
+    font-size: 40px;
+}
+
+.playlist-cover[src=""]::before,
+.playlist-cover:not([src])::before {
+    content: '🎵';
+}
+
+.playlist-details h2,
 .playlist-details h3 {
     font-size: 18px;
     font-weight: 700;
