@@ -4,7 +4,7 @@ const CONFIG = {
     PLAYLIST_ID: '0TLNSXMwwnAPQQaPp5UPZS'
 };
 
-const DEBUG = false;
+const DEBUG = true;
 
 function debugLog(message, data) {
     if (DEBUG) console.log(`[DEBUG] ${message}`, data);
@@ -62,22 +62,32 @@ searchInput.addEventListener('input', (e) => {
 // Rechercher des tracks
 async function searchTracks(query) {
     try {
+        const payload = {
+            action: 'search',
+            q: query
+        };
+        
+        debugLog('🔵 Search payload', payload);
+        
         const response = await fetch(CONFIG.N8N_WEBHOOK_BASE, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Accept': 'application/json' 
             },
-            body: JSON.stringify({
-                action: 'search',
-                q: query
-            })
+            body: JSON.stringify(payload)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        debugLog('🟢 Search response status', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            debugLog('❌ Search error response', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         const data = await response.json();
-        debugLog('Search response', data);
+        debugLog('✅ Search data', data);
         
         if (data.status === 'ok' && data.tracks) {
             displayTracks(data.tracks);
@@ -214,22 +224,32 @@ async function loadPlaylist() {
     try {
         playlistTracks.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Chargement...</div>';
         
+        const payload = {
+            action: 'getPlaylist',
+            playlist_id: CONFIG.PLAYLIST_ID
+        };
+        
+        debugLog('🔵 GetPlaylist payload', payload);
+        
         const response = await fetch(CONFIG.N8N_WEBHOOK_BASE, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Accept': 'application/json' 
             },
-            body: JSON.stringify({
-                action: 'getPlaylist',
-                playlist_id: CONFIG.PLAYLIST_ID
-            })
+            body: JSON.stringify(payload)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        debugLog('🟢 GetPlaylist response status', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            debugLog('❌ GetPlaylist error response', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         const data = await response.json();
-        debugLog('Playlist response', data);
+        debugLog('✅ GetPlaylist data', data);
         
         if (data.status === 'ok' && data.tracks) {
             displayPlaylistTracks(data.tracks, data.total || 0);
@@ -299,21 +319,31 @@ async function loadNowPlaying() {
         
         content.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
         
+        const payload = {
+            action: 'nowPlaying'
+        };
+        
+        debugLog('🔵 NowPlaying payload', payload);
+        
         const response = await fetch(CONFIG.N8N_WEBHOOK_BASE, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Accept': 'application/json' 
             },
-            body: JSON.stringify({
-                action: 'nowPlaying'
-            })
+            body: JSON.stringify(payload)
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        debugLog('🟢 NowPlaying response status', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            debugLog('❌ NowPlaying error response', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
         
         const data = await response.json();
-        debugLog('Now playing response', data);
+        debugLog('✅ NowPlaying data', data);
         
         if (data.status === 'ok' && data.track && data.track.is_playing) {
             content.innerHTML = `
