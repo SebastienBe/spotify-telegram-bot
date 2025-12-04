@@ -340,6 +340,16 @@ body {
     transform: scale(1.05);
 }
 
+.track-btn-delete {
+    background: #e22134;
+    color: white;
+}
+
+.track-btn-delete:hover {
+    background: #c41c2c;
+    transform: scale(1.05);
+}
+
 .track-btn:active {
     transform: scale(0.95);
 }
