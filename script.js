@@ -470,6 +470,7 @@ setTimeout(() => {
 setInterval(() => {
     if (!results.classList.contains('active')) loadNowPlaying();
 }, 30000);
+
 // ============================================
 // PLAYBACK CONTROLS (VERSION FINALE)
 // ============================================
