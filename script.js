@@ -276,7 +276,7 @@ function displayPlaylistTracks(tracks, total) {
     }
     
     playlistTracks.innerHTML = tracks.map((track, index) => `
-        <div class="track-item">
+        <div class="track-item" id="track-${track.uri.split(':')[2]}">
             <div class="track-cover">
                 ${track.image ? `<img src="${track.image}" alt="${escapeHtml(track.name)}">` : '🎵'}
             </div>
@@ -286,6 +286,7 @@ function displayPlaylistTracks(tracks, total) {
             </div>
             <div class="track-actions">
                 <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Queue</button>
+                <button class="track-btn track-btn-delete" onclick='deleteFromPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${track.position}, event)'>🗑️ Delete</button>
             </div>
         </div>
     `).join('');
@@ -298,6 +299,67 @@ function followPlaylist() {
         window.open(`https://open.spotify.com/playlist/${CONFIG.PLAYLIST_ID}`, '_blank');
         showToast(`📱 Ouverture de Spotify...`);
         safeHaptic('notificationOccurred', 'success');
+    } catch (error) {
+        console.error('Erreur:', error);
+        showToast(`❌ ${error.message}`);
+        safeHaptic('notificationOccurred', 'error');
+    }
+}
+
+// Supprimer une track de la playlist
+async function deleteFromPlaylist(uri, name, position, event) {
+    if (event) event.stopPropagation();
+    
+    try {
+        safeHaptic('impactOccurred', 'medium');
+        
+        const payload = {
+            action: 'deleteTrack',
+            uri: uri,
+            playlist_id: CONFIG.PLAYLIST_ID,
+            position: position
+        };
+        
+        debugLog('🔵 DeleteTrack payload', payload);
+        
+        const response = await fetch(CONFIG.N8N_WEBHOOK_BASE, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Accept': 'application/json' 
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        debugLog('🟢 DeleteTrack response status', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            debugLog('❌ DeleteTrack error response', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        debugLog('✅ DeleteTrack data', data);
+        
+        if (data.status === 'ok') {
+            // Animation de suppression
+            const trackId = uri.split(':')[2];
+            const trackElement = document.getElementById(`track-${trackId}`);
+            if (trackElement) {
+                trackElement.style.opacity = '0';
+                trackElement.style.transform = 'translateX(-100%)';
+                trackElement.style.transition = 'all 0.3s ease';
+                setTimeout(() => {
+                    loadPlaylist(); // Recharger la playlist
+                }, 300);
+            }
+            
+            showToast(`✓ "${name}" supprimé de la playlist`);
+            safeHaptic('notificationOccurred', 'success');
+        } else {
+            throw new Error(data.message || 'Erreur lors de la suppression');
+        }
     } catch (error) {
         console.error('Erreur:', error);
         showToast(`❌ ${error.message}`);
