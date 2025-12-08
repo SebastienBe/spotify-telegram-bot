@@ -43,6 +43,36 @@ button,
     font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Optimisation pour petits écrans - Track items */
+@media (max-width: 480px) {
+    .track-item {
+        padding: 8px 10px;
+        gap: 10px;
+    }
+    
+    .track-cover {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .track-name {
+        font-size: 14px;
+    }
+    
+    .track-artist {
+        font-size: 12px;
+    }
+    
+    .track-actions {
+        gap: 4px;
+    }
+    
+    .track-btn {
+        padding: 5px 8px;
+        font-size: 10px;
+    }
+}
+
 /* Améliorations mobile-first pour les boutons */
 @media (hover: none) and (pointer: coarse) {
     /* Sur les appareils tactiles, les états hover sont ignorés */
@@ -54,10 +84,16 @@ button,
     }
     
     /* Agrandir la zone tactile sur mobile */
-    .track-btn,
     .quick-btn,
     .modal-btn {
         min-height: 44px; /* Taille minimale recommandée pour mobile */
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+        touch-action: manipulation;
+    }
+    
+    /* Boutons de track compacts sur mobile */
+    .track-btn {
+        min-height: 32px;
         -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
         touch-action: manipulation;
     }
@@ -447,7 +483,7 @@ button:focus-visible {
 }
 
 .track-item {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-radius: 4px;
     background: transparent;
     margin-bottom: 4px;
@@ -463,21 +499,50 @@ button:focus-visible {
     border-color: rgba(255, 255, 255, 0.05);
 }
 
+.track-item:hover .track-actions {
+    opacity: 1;
+}
+
+.track-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.track-name {
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--spotify-white);
+}
+
+.track-artist {
+    color: var(--spotify-light-gray);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .track-actions {
     display: flex;
     gap: 6px;
-    flex-direction: column;
-    min-width: 120px;
+    flex-direction: row;
+    flex-shrink: 0;
     opacity: 0.9;
     transition: opacity 0.15s ease;
 }
 
 .track-btn {
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 4px;
     font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -485,6 +550,7 @@ button:focus-visible {
     text-align: center;
     letter-spacing: 0;
     background: transparent;
+    flex-shrink: 0;
 }
 
 /* État par défaut - transparent avec bordure */
@@ -569,32 +635,10 @@ button:focus-visible {
 .track-cover img {
     width: 100%;
     height: 100%;
-    border-radius: 6px;
+    border-radius: 4px;
     object-fit: cover;
 }
 
-.track-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.track-name {
-    font-weight: 600;
-    font-size: 15px;
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--spotify-white);
-}
-
-.track-artist {
-    color: var(--spotify-light-gray);
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
 
 .loading {
     text-align: center;
@@ -1068,5 +1112,33 @@ button:focus-visible {
 
     .volume-value {
         display: none;
+    }
+    
+    /* Optimisation track items pour petits écrans */
+    .track-item {
+        padding: 8px 10px;
+        gap: 10px;
+    }
+    
+    .track-cover {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .track-name {
+        font-size: 14px;
+    }
+    
+    .track-artist {
+        font-size: 12px;
+    }
+    
+    .track-actions {
+        gap: 4px;
+    }
+    
+    .track-btn {
+        padding: 5px 8px;
+        font-size: 10px;
     }
 }

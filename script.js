@@ -118,8 +118,8 @@ function displayTracks(tracks) {
                 <div class="track-artist">${escapeHtml(track.artist)}</div>
             </div>
             <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Ajouter à la suite</button>
-                <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Ajouter à la playlist Otera</button>
+                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)' title="Ajouter à la suite">Suite</button>
+                <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)' title="Ajouter à la playlist Otera">Otera</button>
             </div>
         </div>
     `).join('');
@@ -355,8 +355,8 @@ function displayPlaylistTracks(tracks, total) {
                 <div class="track-artist">${escapeHtml(track.artist)}</div>
             </div>
             <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Ajouter à la suite</button>
-                <button class="track-btn track-btn-delete" onclick='deleteFromPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${track.position}, event)'>🗑️ Supprimer</button>
+                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)' title="Ajouter à la suite">Suite</button>
+                <button class="track-btn track-btn-delete" onclick='deleteFromPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${track.position}, event)' title="Supprimer">🗑️</button>
             </div>
         </div>
     `).join('');
