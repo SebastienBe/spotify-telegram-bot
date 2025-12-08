@@ -5,23 +5,73 @@
 }
 
 :root {
+    /* Couleurs Spotify - Flat Design */
     --spotify-green: #1DB954;
-    --spotify-green-dark: #1ed760;
-    --spotify-green-darker: #169c46;
-    --spotify-black: #191414;
+    --spotify-green-hover: #1ed760;
+    --spotify-black: #000000;
     --spotify-dark: #121212;
+    --spotify-dark-elevated: #181818;
     --spotify-gray: #282828;
-    --spotify-light-gray: #b3b3b3;
+    --spotify-gray-hover: #3e3e3e;
+    --spotify-light-gray: #a7a7a7;
+    --spotify-text-subdued: #b3b3b3;
     --spotify-white: #ffffff;
+    
+    /* Ombres subtiles pour flat design */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
 body {
     font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: var(--spotify-black);
+    background: var(--spotify-dark);
     color: var(--spotify-white);
     padding: 16px;
     padding-bottom: 80px;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typographie Circular pour tous les boutons */
+button,
+.track-btn,
+.quick-btn,
+.modal-btn,
+.control-btn {
+    font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Améliorations mobile-first pour les boutons */
+@media (hover: none) and (pointer: coarse) {
+    /* Sur les appareils tactiles, les états hover sont ignorés */
+    .track-btn:hover,
+    .quick-btn:hover,
+    .modal-btn:hover {
+        background: transparent;
+        border-color: inherit;
+    }
+    
+    /* Agrandir la zone tactile sur mobile */
+    .track-btn,
+    .quick-btn,
+    .modal-btn {
+        min-height: 44px; /* Taille minimale recommandée pour mobile */
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+        touch-action: manipulation;
+    }
+}
+
+/* Supprimer le highlight bleu sur tap mobile */
+button {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+button:focus-visible {
+    outline: 2px solid var(--spotify-white);
+    outline-offset: 2px;
 }
 
 .header {
@@ -56,24 +106,25 @@ body {
 
 .search-box {
     width: 100%;
-    padding: 14px 16px;
+    padding: 12px 16px;
     padding-left: 44px;
     border: none;
-    border-radius: 24px;
+    border-radius: 4px;
     font-size: 14px;
-    font-weight: 500;
-    background: var(--spotify-gray);
+    font-weight: 400;
+    background: var(--spotify-dark-elevated);
     color: var(--spotify-white);
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .search-box::placeholder {
-    color: var(--spotify-light-gray);
+    color: var(--spotify-text-subdued);
 }
 
 .search-box:focus {
-    outline: 3px solid var(--spotify-green);
-    background: var(--spotify-dark);
+    outline: 2px solid var(--spotify-white);
+    outline-offset: -2px;
+    background: var(--spotify-gray);
 }
 
 .search-icon {
@@ -86,23 +137,23 @@ body {
 }
 
 .now-playing-card {
-    background: linear-gradient(135deg, var(--spotify-green) 0%, var(--spotify-green-darker) 100%);
-    border-radius: 16px;
-    padding: 24px;
+    background: var(--spotify-dark-elevated);
+    border-radius: 8px;
+    padding: 20px;
     margin-bottom: 24px;
     color: white;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
+    transition: background-color 0.15s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 200px;
 }
 
 .now-playing-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(29, 185, 84, 0.4);
+    background: var(--spotify-gray);
 }
 
 .now-playing-card:active {
-    transform: scale(0.98);
+    background: var(--spotify-gray-hover);
 }
 
 .now-playing-card .now-playing-header,
@@ -110,10 +161,18 @@ body {
     pointer-events: all;
 }
 
+/* Fix pour éviter que la card s'agrandisse pendant le chargement */
+#nowPlayingContent {
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .playback-controls {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
     pointer-events: all;
     display: flex;
     align-items: center;
@@ -157,14 +216,13 @@ body {
 .now-playing-cover {
     width: 80px;
     height: 80px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    background: var(--spotify-gray);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 36px;
     flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .now-playing-cover img {
@@ -201,47 +259,81 @@ body {
     padding: 24px;
     opacity: 0.8;
     font-size: 14px;
+    width: 100%;
+}
+
+/* Loader compact pour nowPlayingContent */
+#nowPlayingContent .loading {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+#nowPlayingContent .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
 }
 
 .quick-actions {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     margin-bottom: 24px;
 }
 
 .quick-btn {
     flex: 1;
-    padding: 14px 20px;
-    border: none;
-    border-radius: 24px;
-    font-size: 14px;
+    padding: 10px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
-    background: var(--spotify-gray);
+    transition: all 0.15s ease;
+    background: transparent;
     color: var(--spotify-white);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .quick-btn:hover {
-    background: #333;
-    transform: scale(1.02);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .quick-btn:active {
-    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--spotify-white);
+}
+
+.quick-btn:focus {
+    outline: 2px solid var(--spotify-white);
+    outline-offset: 2px;
 }
 
 .quick-btn.btn-follow {
-    background: var(--spotify-green);
-    color: var(--spotify-black);
+    background: transparent;
+    color: var(--spotify-white);
+    border-color: var(--spotify-white);
 }
 
 .quick-btn.btn-follow:hover {
-    background: var(--spotify-green-dark);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--spotify-white);
+}
+
+.quick-btn.btn-follow:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.quick-btn.btn-follow:focus {
+    outline: 2px solid var(--spotify-white);
+    outline-offset: 2px;
 }
 
 .playlist-section {
@@ -256,8 +348,9 @@ body {
 .playlist-header {
     margin-bottom: 20px;
     padding: 20px;
-    background: var(--spotify-gray);
-    border-radius: 12px;
+    background: var(--spotify-dark-elevated);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .playlist-info {
@@ -269,11 +362,10 @@ body {
 .playlist-cover {
     width: 80px;
     height: 80px;
-    border-radius: 8px;
+    border-radius: 4px;
     object-fit: cover;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    transition: transform 0.2s ease;
-    background: linear-gradient(135deg, #1db954, #1ed760);
+    transition: opacity 0.15s ease;
+    background: var(--spotify-gray);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -283,7 +375,7 @@ body {
 }
 
 .playlist-cover:hover {
-    transform: scale(1.05);
+    opacity: 0.9;
 }
 
 /* Si l'image charge, cacher le texte/emoji */
@@ -356,80 +448,122 @@ body {
 
 .track-item {
     padding: 12px 16px;
-    border-radius: 8px;
-    background: var(--spotify-gray);
-    margin-bottom: 8px;
-    transition: all 0.2s ease;
+    border-radius: 4px;
+    background: transparent;
+    margin-bottom: 4px;
+    transition: background-color 0.15s ease;
     display: flex;
     gap: 12px;
     align-items: center;
+    border: 1px solid transparent;
 }
 
 .track-item:hover {
-    background: #333;
+    background: var(--spotify-dark-elevated);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
 .track-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-direction: column;
+    min-width: 120px;
+    opacity: 0.9;
+    transition: opacity 0.15s ease;
 }
 
 .track-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     white-space: nowrap;
+    text-align: center;
+    letter-spacing: 0;
+    background: transparent;
 }
 
+/* État par défaut - transparent avec bordure */
 .track-btn-queue {
-    background: var(--spotify-white);
-    color: var(--spotify-black);
+    background: transparent;
+    color: var(--spotify-white);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+/* État hover - fond légèrement visible */
 .track-btn-queue:hover {
-    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* État active - fond plus visible pour feedback tactile mobile */
+.track-btn-queue:active {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--spotify-white);
+}
+
+/* État focus - pour accessibilité */
+.track-btn-queue:focus {
+    outline: 2px solid var(--spotify-white);
+    outline-offset: 2px;
 }
 
 .track-btn-playlist {
-    background: var(--spotify-green);
-    color: var(--spotify-black);
+    background: transparent;
+    color: var(--spotify-green);
+    border: 1px solid var(--spotify-green);
 }
 
 .track-btn-playlist:hover {
-    background: var(--spotify-green-dark);
-    transform: scale(1.05);
+    background: rgba(29, 185, 84, 0.1);
+    border-color: var(--spotify-green-hover);
+}
+
+.track-btn-playlist:active {
+    background: rgba(29, 185, 84, 0.2);
+    border-color: var(--spotify-green-hover);
+}
+
+.track-btn-playlist:focus {
+    outline: 2px solid var(--spotify-green);
+    outline-offset: 2px;
 }
 
 .track-btn-delete {
-    background: #e22134;
-    color: white;
+    background: transparent;
+    color: #e91429;
+    border: 1px solid #e91429;
 }
 
 .track-btn-delete:hover {
-    background: #c41c2c;
-    transform: scale(1.05);
+    background: rgba(233, 20, 41, 0.1);
+    border-color: #c41c2c;
 }
 
-.track-btn:active {
-    transform: scale(0.95);
+.track-btn-delete:active {
+    background: rgba(233, 20, 41, 0.2);
+    border-color: #c41c2c;
+}
+
+.track-btn-delete:focus {
+    outline: 2px solid #e91429;
+    outline-offset: 2px;
 }
 
 .track-cover {
     width: 56px;
     height: 56px;
-    border-radius: 6px;
-    background: var(--spotify-dark);
+    border-radius: 4px;
+    background: var(--spotify-gray);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .track-cover img {
@@ -500,13 +634,14 @@ body {
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%) translateY(100px);
-    background: var(--spotify-green);
-    color: var(--spotify-black);
-    padding: 16px 24px;
-    border-radius: 24px;
-    font-weight: 700;
+    background: var(--spotify-dark-elevated);
+    color: var(--spotify-white);
+    padding: 14px 24px;
+    border-radius: 4px;
+    font-weight: 600;
     font-size: 14px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: transform 0.3s ease;
     z-index: 1000;
     max-width: 90%;
@@ -543,14 +678,15 @@ body {
 }
 
 .modal-content {
-    background: var(--spotify-gray);
-    border-radius: 16px;
+    background: var(--spotify-dark-elevated);
+    border-radius: 8px;
     padding: 32px 24px;
     max-width: 90%;
     width: 400px;
     text-align: center;
     animation: slideUp 0.3s ease;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @keyframes slideUp {
@@ -585,48 +721,64 @@ body {
 
 .modal-actions {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-direction: column;
 }
 
 .modal-btn {
-    padding: 14px 24px;
-    border: none;
-    border-radius: 24px;
+    padding: 10px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     width: 100%;
+    letter-spacing: 0;
+    background: transparent;
 }
 
 .modal-btn-cancel {
-    background: var(--spotify-dark);
+    background: transparent;
     color: var(--spotify-white);
-    border: 2px solid var(--spotify-light-gray);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .modal-btn-cancel:hover {
-    background: var(--spotify-gray);
-    transform: scale(1.02);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .modal-btn-cancel:active {
-    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--spotify-white);
+}
+
+.modal-btn-cancel:focus {
+    outline: 2px solid var(--spotify-white);
+    outline-offset: 2px;
 }
 
 .modal-btn-delete {
-    background: #e22134;
-    color: white;
+    background: transparent;
+    color: #e91429;
+    border: 1px solid #e91429;
 }
 
 .modal-btn-delete:hover {
-    background: #c41c2c;
-    transform: scale(1.02);
+    background: rgba(233, 20, 41, 0.1);
+    border-color: #c41c2c;
 }
 
 .modal-btn-delete:active {
-    transform: scale(0.98);
+    background: rgba(233, 20, 41, 0.2);
+    border-color: #c41c2c;
+}
+
+.modal-btn-delete:focus {
+    outline: 2px solid #e91429;
+    outline-offset: 2px;
 }
 
 /* Responsive modal pour mobile */
@@ -665,11 +817,12 @@ body {
 .control-btn {
     background: none;
     border: none;
-    color: #b3b3b3;
+    color: var(--spotify-text-subdued);
     cursor: pointer;
     padding: 8px;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -692,20 +845,19 @@ body {
 }
 
 .control-btn.secondary:hover {
-    color: #ffffff;
-    transform: scale(1.06);
+    color: var(--spotify-white);
 }
 
 .control-btn.secondary:active {
-    transform: scale(0.95);
+    opacity: 0.7;
 }
 
 /* Bouton Play/Pause principal */
 .control-btn.primary {
     width: 40px;
     height: 40px;
-    background: #ffffff;
-    color: #000000;
+    background: var(--spotify-white);
+    color: var(--spotify-black);
     padding: 0;
 }
 
@@ -715,17 +867,17 @@ body {
 }
 
 .control-btn.primary:hover {
-    transform: scale(1.06);
-    background: #f6f6f6;
+    background: var(--spotify-green);
+    color: var(--spotify-black);
 }
 
 .control-btn.primary:active {
-    transform: scale(0.98);
+    opacity: 0.9;
 }
 
 /* États actifs (shuffle, repeat) */
 .control-btn.active {
-    color: #1db954;
+    color: var(--spotify-green);
     position: relative;
 }
 
@@ -754,7 +906,7 @@ body {
 .volume-btn {
     background: none;
     border: none;
-    color: #b3b3b3;
+    color: var(--spotify-text-subdued);
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -762,7 +914,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s ease;
+    transition: color 0.15s ease;
     flex-shrink: 0;
 }
 
@@ -772,14 +924,15 @@ body {
 }
 
 .volume-btn:hover {
-    color: #ffffff;
+    color: var(--spotify-white);
 }
 
 .volume-slider {
     -webkit-appearance: none;
+    appearance: none;
     width: 100px;
     height: 4px;
-    background: #4d4d4d;
+    background: var(--spotify-gray);
     border-radius: 2px;
     outline: none;
     cursor: pointer;
@@ -794,7 +947,7 @@ body {
     left: 0;
     width: var(--volume-percentage, 50%);
     height: 100%;
-    background: #1db954;
+    background: var(--spotify-white);
     border-radius: 2px;
     pointer-events: none;
 }
@@ -833,7 +986,7 @@ body {
 .volume-value {
     font-size: 12px;
     font-weight: 400;
-    color: #b3b3b3;
+    color: var(--spotify-text-subdued);
     min-width: 32px;
     text-align: center;
     flex-shrink: 0;

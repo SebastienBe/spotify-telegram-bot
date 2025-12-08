@@ -118,8 +118,8 @@ function displayTracks(tracks) {
                 <div class="track-artist">${escapeHtml(track.artist)}</div>
             </div>
             <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Queue</button>
-                <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Otera</button>
+                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Ajouter à la suite</button>
+                <button class="track-btn track-btn-playlist" onclick='addToPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Ajouter à la playlist Otera</button>
             </div>
         </div>
     `).join('');
@@ -152,7 +152,7 @@ async function addToQueue(uri, name, artist, event) {
         debugLog('Add response', data);
         
         if (data.status === 'ok') {
-            showToast(`✓ "${name}" ajouté à la queue`);
+            showToast(`✓ "${name}" ajouté à la suite`);
             safeHaptic('notificationOccurred', 'success');
         } else {
             throw new Error(data.message || 'Erreur lors de l\'ajout');
@@ -355,8 +355,8 @@ function displayPlaylistTracks(tracks, total) {
                 <div class="track-artist">${escapeHtml(track.artist)}</div>
             </div>
             <div class="track-actions">
-                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Queue</button>
-                <button class="track-btn track-btn-delete" onclick='deleteFromPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${track.position}, event)'>🗑️ Delete</button>
+                <button class="track-btn track-btn-queue" onclick='addToQueue(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${JSON.stringify(track.artist)}, event)'>Ajouter à la suite</button>
+                <button class="track-btn track-btn-delete" onclick='deleteFromPlaylist(${JSON.stringify(track.uri)}, ${JSON.stringify(track.name)}, ${track.position}, event)'>🗑️ Supprimer</button>
             </div>
         </div>
     `).join('');
@@ -477,7 +477,8 @@ async function loadNowPlaying() {
         const data = await response.json();
         debugLog('✅ NowPlaying data', data);
         
-        if (data.status === 'ok' && data.track && data.track.is_playing) {
+        // Vérifier si un track est en cours de lecture
+        if (data.status === 'ok' && data.track) {
             content.innerHTML = `
                 <div class="now-playing-content">
                     <div class="now-playing-cover">
